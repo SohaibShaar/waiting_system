@@ -45,6 +45,10 @@ async function getDisplayScreenData() {
   }));
 }
 
+/**
+ * تنسيق البيانات للعرض على الشاشة للاستدعاءات المستدعية
+ */
+
 async function getDisplayScreenDataCalled() {
   const recentCalls = await getRecentCalls(10);
   const recentCallsInProgress = recentCalls.filter(

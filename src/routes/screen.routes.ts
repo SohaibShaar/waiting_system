@@ -20,7 +20,7 @@ screenRouter.get("/recent-calls", getRecentCallsForDisplay);
 screenRouter.get("/screen-data", getScreenData);
 
 /**
- * GET /api/display/screen-data-in-progress
+ * GET /api/display/screen-data-called
  * بيانات الشاشة العامة منسقة للاستدعاءات الحالية
  */
 screenRouter.get("/screen-data-called", getScreenDataCalled);

@@ -68,6 +68,29 @@ io.on("connection", (socket: any) => {
   });
 });
 
+// وظائف إرسال الأحداث
+export const emitQueueUpdate = (data: any) => {
+  io.to("display-screen").emit("queue-updated", data);
+  console.log("📡 Emitted queue-updated to display-screen");
+};
+
+export const emitStationUpdate = (stationId: number, data: any) => {
+  io.to(`station-${stationId}`).emit("station-updated", data);
+  io.to("display-screen").emit("station-updated", data);
+  console.log(
+    `📡 Emitted station-updated to station-${stationId} and display-screen`
+  );
+};
+
+export const emitPatientCalled = (data: any) => {
+  io.to("display-screen").emit("patient-called", data);
+  console.log("📡 Emitted patient-called to display-screen");
+};
+
+export const emitScreenDataUpdate = () => {
+  io.to("display-screen").emit("screen-data-updated");
+  console.log("📡 Emitted screen-data-updated to display-screen");
+};
 // Export io for use in other modules
 export { io };
 

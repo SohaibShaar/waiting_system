@@ -7,13 +7,13 @@ import {
 import {
   startService,
   completeStationService,
-
 } from "../services/station.service";
 import {
   callNextPatient,
   callSpecificQueue,
 } from "../services/patient.service";
 import { PrismaClient } from "../generated/prisma";
+import { emitPatientCalled, emitScreenDataUpdate, emitStationUpdate } from "..";
 
 const prisma = new PrismaClient();
 
@@ -286,17 +286,27 @@ export async function callNext(req: Request, res: Response) {
 
     const result = await callNextPatient(stationId, calledBy || undefined);
 
-    if (!result.success) {
+    if (result.success) {
+      // إرسال حدث Socket.IO
+      emitPatientCalled({
+        queueNumber: result.queueNumber,
+        displayNumber: result.displayNumber,
+        stationId: stationId,
+        calledAt: new Date().toISOString(),
+      });
+
+      emitScreenDataUpdate(); // تحديث بيانات الشاشة
+
+      res.json({
+        success: true,
+        queue: result.queue,
+        displayNumber: result.displayNumber,
+        queueNumber: result.queueNumber,
+        message: `تم استدعاء الدور #${result.queueNumber}`,
+      });
+    } else {
       return res.status(400).json(result);
     }
-
-    res.json({
-      success: true,
-      queue: result.queue,
-      displayNumber: result.displayNumber,
-      queueNumber: result.queueNumber,
-      message: `تم استدعاء الدور #${result.queueNumber}`,
-    });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -376,14 +386,24 @@ export async function startStationService(req: Request, res: Response) {
 
     const result = await startService(queueId, stationId);
 
-    if (!result.success) {
+    if (result.success) {
+      // إرسال حدث Socket.IO
+      emitStationUpdate(stationId, {
+        queueId: queueId,
+        stationId: stationId,
+        status: "IN_PROGRESS",
+        startedAt: new Date().toISOString(),
+      });
+
+      emitScreenDataUpdate(); // تحديث بيانات الشاشة
+
+      res.json({
+        success: true,
+        message: "بدأت الخدمة",
+      });
+    } else {
       return res.status(400).json(result);
     }
-
-    res.json({
-      success: true,
-      message: "بدأت الخدمة",
-    });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -423,6 +443,17 @@ export async function completeService(req: Request, res: Response) {
     );
 
     if (result.moved) {
+      // إرسال حدث Socket.IO
+      emitStationUpdate(stationId, {
+        queueId: queueId,
+        stationId: stationId,
+        status: result.completed ? "COMPLETED" : "MOVED",
+        completedAt: new Date().toISOString(),
+        nextStation: result.nextStation,
+      });
+
+      emitScreenDataUpdate(); // تحديث بيانات الشاشة
+
       res.json({
         success: true,
         moved: true,
@@ -431,6 +462,17 @@ export async function completeService(req: Request, res: Response) {
         message: `انتهت الخدمة - انتقل للمحطة ${result.nextStation?.name}`,
       });
     } else if (result.completed) {
+      // إرسال حدث Socket.IO
+      emitStationUpdate(stationId, {
+        queueId: queueId,
+        stationId: stationId,
+        status: result.completed ? "COMPLETED" : "MOVED",
+        completedAt: new Date().toISOString(),
+        nextStation: result.nextStation,
+      });
+
+      emitScreenDataUpdate(); // تحديث بيانات الشاشة
+
       res.json({
         success: true,
         moved: false,
