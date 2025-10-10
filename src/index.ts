@@ -9,6 +9,7 @@ import patientRoutes from "./routes/patient.routes";
 import queueRoutes from "./routes/queue.routes";
 import stationRoutes from "./routes/station.routes";
 import statsRoutes from "./routes/stats.routes";
+import screenRouter from "./routes/screen.routes";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use("/api/patients", patientRoutes);
 app.use("/api/queue", queueRoutes);
 app.use("/api/stations", stationRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/display", screenRouter);
 
 // Root endpoint
 app.get("/", (req, res) => {

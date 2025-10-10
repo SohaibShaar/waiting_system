@@ -11,8 +11,6 @@ import {
   startStationService,
   completeService,
   skipCurrentPatient,
-  getRecentCallsForDisplay,
-  getScreenData,
 } from "../controllers/station.controller";
 
 const router = Router();
@@ -82,17 +80,5 @@ router.post("/:stationId/complete-service", completeService);
  * تخطي المريض الحالي
  */
 router.post("/:stationId/skip-patient", skipCurrentPatient);
-
-/**
- * GET /api/display/recent-calls
- * آخر الاستدعاءات للشاشة العامة
- */
-router.get("/display/recent-calls", getRecentCallsForDisplay);
-
-/**
- * GET /api/display/screen-data
- * بيانات الشاشة العامة منسقة
- */
-router.get("/display/screen-data", getScreenData);
 
 export default router;
