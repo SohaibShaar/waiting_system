@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Enums - تعريف الحالات المختلفة
+// ============================================
+
+// حالات الدور في المحطة
+enum QueueStatus {
+  WAITING // في الانتظار
+  CALLED // تم الاستدعاء
+  IN_PROGRESS // قيد الخدمة
+  COMPLETED // مكتمل
+  CANCELLED // ملغي
+  SKIPPED // تم التخطي
+}
+
+// حالة الدور الكلية
+enum OverallQueueStatus {
+  ACTIVE // نشط (يتنقل بين المحطات)
+  COMPLETED // أنهى جميع المحطات
+  CANCELLED // ملغي
+}
+
+// ============================================
+// Models - نماذج قاعدة البيانات
+// ============================================
+
+// 1. المريض - بيانات المريض الأساسية
+model Patient {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  phoneNumber String?  @db.VarChar(20)
+  nationalId  String?  @unique @db.VarChar(50)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // العلاقات
+  queues          Queue[] // الأدوار الحالية
+  completedVisits CompletedVisit[] // الزيارات المكتملة
+
+  @@index([phoneNumber])
+  @@index([nationalId])
+  @@map("patients")
+}
+
+// 2. المحطة/الجهاز - كل جهاز في العيادة
+model Station {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(255) // "الاستقبال", "الفحص الأولي", "الطبيب"
+  displayNumber Int      @unique // رقم الشاشة
+  order         Int      @unique // ترتيب المحطة (1, 2, 3, ...)
+  isActive      Boolean  @default(true) // هل المحطة نشطة
+  description   String?  @db.Text // وصف المحطة
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // العلاقات
+  queues       Queue[] // الأدوار الحالية في هذه المحطة
+  queueHistory QueueHistory[] // سجل التحركات
+
+  @@index([order])
+  @@map("stations")
+}
+
+// 3. الدور - الدور النشط للمريض
+model Queue {
+  id               Int                @id @default(autoincrement())
+  queueNumber      Int // رقم الدور (1, 2, 3, ...)
+  patientId        Int
+  currentStationId Int // المحطة الحالية
+  status           OverallQueueStatus @default(ACTIVE)
+  priority         Int                @default(0) // الأولوية (0 = عادي، أعلى = أولوية أكبر)
+  notes            String?            @db.Text // ملاحظات عامة
+  createdAt        DateTime           @default(now())
+  completedAt      DateTime? // وقت الانتهاء الكلي
+
+  // العلاقات
+  patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  currentStation Station        @relation(fields: [currentStationId], references: [id])
+  history        QueueHistory[] // سجل التحركات
+
+  @@unique([queueNumber, createdAt])
+  @@index([patientId])
+  @@index([currentStationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("queues")
+}
+
+// 4. سجل التحركات - كل خطوة في رحلة المريض
+model QueueHistory {
+  id          Int         @id @default(autoincrement())
+  queueId     Int
+  stationId   Int
+  status      QueueStatus @default(WAITING)
+  calledAt    DateTime? // وقت الاستدعاء
+  startedAt   DateTime? // وقت بدء الخدمة
+  completedAt DateTime? // وقت الانتهاء من الخدمة
+  notes       String?     @db.Text
+  calledBy    String?     @db.VarChar(255) // اسم الموظف الذي استدعى
+  createdAt   DateTime    @default(now())
+
+  // العلاقات
+  queue   Queue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  station Station @relation(fields: [stationId], references: [id])
+
+  @@index([queueId])
+  @@index([stationId])
+  @@index([status])
+  @@index([calledAt])
+  @@map("queue_history")
+}
+
+// 5. الزيارات المكتملة - أرشيف المرضى الذين أنهوا رحلتهم
+model CompletedVisit {
+  id            Int      @id @default(autoincrement())
+  patientId     Int
+  queueNumber   Int // رقم الدور
+  totalDuration Int? // المدة الكلية بالدقائق
+  waitingTime   Int? // وقت الانتظار الكلي بالدقائق
+  serviceTime   Int? // وقت الخدمة الكلي بالدقائق
+  stationsCount Int // عدد المحطات التي مر بها
+  visitData     Json? // بيانات إضافية (JSON)
+  notes         String?  @db.Text
+  completedAt   DateTime @default(now())
+
+  // العلاقات
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([completedAt])
+  @@map("completed_visits")
+}
+
+// 6. إعدادات النظام - لحفظ آخر رقم دور وإعدادات أخرى
+model SystemSettings {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique @db.VarChar(255)
+  value       String   @db.Text
+  description String?  @db.Text
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}
