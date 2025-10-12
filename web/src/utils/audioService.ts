@@ -114,7 +114,7 @@ export class AudioService {
   }
 
   // القراءة الصوتية
-  async speak(text: string, rate: number = 1) {
+  async speak(text: string, rate: number = 0.9) {
     // إيقاف أي قراءة سابقة
     this.synth.cancel();
 
@@ -152,7 +152,7 @@ export class AudioService {
     });
   }
 
-  // دالة شاملة للنداء على المريض
+  // دالة شاملة للنداء على المراجع
   async announcePatient(queueNumber: number, stationName: string) {
     try {
       console.log(`🔊 بدء النداء على الدور #${queueNumber} → ${stationName}`);
@@ -178,7 +178,7 @@ export class AudioService {
 
       console.log("✅ انتهى النداء بنجاح");
     } catch (error) {
-      console.error("❌ خطأ في النداء على المريض:", error);
+      console.error("❌ خطأ في النداء على المراجع :", error);
       throw error; // إعادة رمي الخطأ ليظهر في console
     }
   }

@@ -3,7 +3,7 @@ import { upsertPatient, findPatient } from "../services/patient.service";
 import { getPatientHistory } from "../services/stats.service";
 
 /**
- * إنشاء أو تحديث مريض
+ * إنشاء أو تحديث مراجع
  * POST /api/patients
  */
 export async function createOrUpdatePatient(req: Request, res: Response) {
@@ -14,7 +14,7 @@ export async function createOrUpdatePatient(req: Request, res: Response) {
     if (!name) {
       return res.status(400).json({
         success: false,
-        error: "اسم المريض مطلوب",
+        error: "اسم المراجع مطلوب",
       });
     }
 
@@ -37,7 +37,7 @@ export async function createOrUpdatePatient(req: Request, res: Response) {
 }
 
 /**
- * الحصول على بيانات مريض معين
+ * الحصول على بيانات مراجع معين
  * GET /api/patients/:id
  */
 export async function getPatientById(req: Request, res: Response) {
@@ -47,7 +47,7 @@ export async function getPatientById(req: Request, res: Response) {
     if (isNaN(id)) {
       return res.status(400).json({
         success: false,
-        error: "معرف المريض غير صالح",
+        error: "معرف المراجع غير صالح",
       });
     }
 
@@ -56,7 +56,7 @@ export async function getPatientById(req: Request, res: Response) {
     if (!patient) {
       return res.status(404).json({
         success: false,
-        error: "المريض غير موجود",
+        error: "المراجع غير موجود",
       });
     }
 
@@ -73,7 +73,7 @@ export async function getPatientById(req: Request, res: Response) {
 }
 
 /**
- * البحث عن مريض برقم الهاتف أو الهوية
+ * البحث عن مراجع برقم الهاتف أو الهوية
  * GET /api/patients/search?phone=xxx&nationalId=xxx
  */
 export async function searchPatient(req: Request, res: Response) {
@@ -95,7 +95,7 @@ export async function searchPatient(req: Request, res: Response) {
     if (!patient) {
       return res.status(404).json({
         success: false,
-        error: "المريض غير موجود",
+        error: "المراجع غير موجود",
       });
     }
 
@@ -112,7 +112,7 @@ export async function searchPatient(req: Request, res: Response) {
 }
 
 /**
- * تاريخ زيارات المريض
+ * تاريخ زيارات المراجع
  * GET /api/patients/:id/history
  */
 export async function getPatientVisitHistory(req: Request, res: Response) {
@@ -122,7 +122,7 @@ export async function getPatientVisitHistory(req: Request, res: Response) {
     if (isNaN(patientId)) {
       return res.status(400).json({
         success: false,
-        error: "معرف المريض غير صالح",
+        error: "معرف المراجع غير صالح",
       });
     }
 

@@ -35,7 +35,7 @@ async function createAccountingData(data: {
     `✅ تم حفظ بيانات المحاسبة للدور #${accountingData.queue.queueNumber}`
   );
 
-  // لا يتم استدعاء المريض التالي تلقائياً
+  // لا يتم استدعاء المراجع التالي تلقائياً
   // يجب الاستدعاء يدوياً من واجهة المستخدم
 
   return {

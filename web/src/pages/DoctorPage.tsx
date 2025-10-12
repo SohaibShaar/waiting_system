@@ -10,6 +10,8 @@ interface CurrentPatient {
   queueId: number;
   queueNumber: number;
   patientId: number;
+  maleName: string;
+  femaleName: string;
   ReceptionData?: {
     maleName: string;
     maleLastName: string;
@@ -39,6 +41,10 @@ const DoctorPage = () => {
   const [loading, setLoading] = useState(false);
   const [stationId, setStationId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [recallCount, setRecallCount] = useState(0); // عداد إعادة النداء
+  const [isFromSidebar, setIsFromSidebar] = useState(false); // هل جاء من القائمة؟
+  const [hasBeenCalled, setHasBeenCalled] = useState(false); // هل تم استدعاءه؟
+  const [recallCooldown, setRecallCooldown] = useState(0); // عداد الانتظار (10 ثواني)
 
   // WebSocket updates - handled by sidebar
 
@@ -62,6 +68,16 @@ const DoctorPage = () => {
     fetchStationId();
   }, []);
 
+  // عداد تنازلي لـ 10 ثواني بعد إعادة النداء
+  useEffect(() => {
+    if (recallCooldown > 0) {
+      const timer = setTimeout(() => {
+        setRecallCooldown(recallCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [recallCooldown]);
+
   const callNextPatient = async () => {
     if (!stationId) {
       setErrorMessage("⚠️ جاري تحميل بيانات المحطة...");
@@ -83,10 +99,13 @@ const DoctorPage = () => {
 
         if (queueResponse.data.success) {
           const queue = queueResponse.data.queue;
+          const reception = queue.ReceptionData;
           setCurrentPatient({
             queueId: queue.id,
             queueNumber: queue.queueNumber,
             patientId: queue.patientId,
+            maleName: reception?.maleName || "",
+            femaleName: reception?.femaleName || "",
             ReceptionData: queue.ReceptionData,
           });
 
@@ -119,7 +138,7 @@ const DoctorPage = () => {
         "حدث خطأ";
       setErrorMessage(errorMsg);
 
-      console.error("خطأ في استدعاء المريض:", error);
+      console.error("خطأ في استدعاء المراجع :", error);
     } finally {
       setLoading(false);
     }
@@ -127,7 +146,7 @@ const DoctorPage = () => {
 
   const handleSave = async () => {
     if (!currentPatient) {
-      alert("⚠️ لا يوجد مريض حالي");
+      alert("⚠️ لا يوجد مراجع حالي");
       return;
     }
 
@@ -146,6 +165,21 @@ const DoctorPage = () => {
           notes: "تم الفحص النهائي",
         });
         setCurrentPatient(null);
+        setRecallCount(0);
+        setIsFromSidebar(false);
+        setFormData({
+          maleBloodType: "",
+          femaleBloodType: "",
+          maleHIVstatus: "NEGATIVE",
+          femaleHIVstatus: "NEGATIVE",
+          maleHBSstatus: "NEGATIVE",
+          femaleHBSstatus: "NEGATIVE",
+          maleHBCstatus: "NEGATIVE",
+          femaleHBCstatus: "NEGATIVE",
+          maleNotes: "",
+          femaleNotes: "",
+          notes: "",
+        });
       }
     } catch (error) {
       const err = error as {
@@ -160,11 +194,173 @@ const DoctorPage = () => {
     }
   };
 
+  // عند اختيار دور من القائمة
+  const handleSelectQueueFromSidebar = async (queue: {
+    id: number;
+    queueNumber: number;
+    patient: { name: string };
+    ReceptionData?: {
+      maleName: string;
+      maleLastName: string;
+      femaleName: string;
+      femaleLastName: string;
+      phoneNumber?: string;
+    };
+  }) => {
+    try {
+      setLoading(true);
+      const queueResponse = await axios.get(`${API_URL}/queue/${queue.id}`);
+
+      if (queueResponse.data.success) {
+        const fullQueue = queueResponse.data.queue;
+        const reception = fullQueue.ReceptionData;
+
+        setCurrentPatient({
+          queueId: fullQueue.id,
+          queueNumber: fullQueue.queueNumber,
+          patientId: fullQueue.patientId,
+          maleName: reception?.maleName || "",
+          femaleName: reception?.femaleName || "",
+          ReceptionData: reception,
+        });
+
+        // فحص إذا كان الدور قد تم استدعاءه (status = CALLED أو IN_PROGRESS)
+        const hasCalled =
+          fullQueue.QueueHistory?.some(
+            (h: { stationId: number; status: string }) =>
+              h.stationId === stationId &&
+              (h.status === "CALLED" || h.status === "IN_PROGRESS")
+          ) || false;
+
+        setIsFromSidebar(true);
+        setRecallCount(0);
+        setRecallCooldown(0);
+        setHasBeenCalled(hasCalled);
+        setErrorMessage("");
+
+        console.log(`✅ تم اختيار الدور #${fullQueue.queueNumber}`);
+        console.log(
+          `📞 حالة الاستدعاء: ${
+            hasCalled ? "تم استدعاءه" : "لم يتم استدعاءه بعد"
+          }`
+        );
+      }
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الدور:", error);
+      setErrorMessage("❌ حدث خطأ في جلب بيانات الدور");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // إعادة النداء
+  const handleRecall = async () => {
+    if (!currentPatient || !stationId) return;
+
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        `${API_URL}/stations/${stationId}/call-specific`,
+        {
+          queueNumber: currentPatient.queueNumber,
+          calledBy: "الطبيبة (إعادة نداء)",
+        }
+      );
+
+      if (response.data.success) {
+        setRecallCount((prev) => prev + 1);
+        setRecallCooldown(10); // بدء العداد التنازلي 10 ثواني
+        setHasBeenCalled(true); // الآن تم استدعاءه بالتأكيد
+        alert(`✅ تم إعادة النداء (المحاولة ${recallCount + 1}/3)`);
+        console.log("⏳ بدء العداد التنازلي 10 ثواني...");
+      }
+    } catch (error) {
+      const err = error as {
+        response?: { data?: { message?: string; error?: string } };
+        message?: string;
+      };
+      const errorMsg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "حدث خطأ في إعادة النداء";
+      alert(`❌ ${errorMsg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // إلغاء الدور (لم يحضر)
+  const handleCancelQueue = async () => {
+    if (!currentPatient) return;
+
+    if (recallCount < 3) {
+      alert(
+        `⚠️ يجب إعادة النداء 3 مرات قبل الإلغاء (حالياً: ${recallCount}/3)`
+      );
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `هل أنت متأكد من إلغاء الدور #${currentPatient.queueNumber}؟\n(المراجع لم يحضر بعد 3 محاولات)`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.delete(
+        `${API_URL}/queue/${currentPatient.queueId}/cancel`
+      );
+
+      if (response.data.success) {
+        alert(`✅ تم إلغاء الدور #${currentPatient.queueNumber}`);
+
+        setCurrentPatient(null);
+        setRecallCount(0);
+        setIsFromSidebar(false);
+        setFormData({
+          maleBloodType: "",
+          femaleBloodType: "",
+          maleHIVstatus: "NEGATIVE",
+          femaleHIVstatus: "NEGATIVE",
+          maleHBSstatus: "NEGATIVE",
+          femaleHBSstatus: "NEGATIVE",
+          maleHBCstatus: "NEGATIVE",
+          femaleHBCstatus: "NEGATIVE",
+          maleNotes: "",
+          femaleNotes: "",
+          notes: "",
+        });
+
+        console.log("🔄 تحديث الصفحة بعد الإلغاء...");
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    } catch (error) {
+      const err = error as {
+        response?: { data?: { message?: string; error?: string } };
+        message?: string;
+      };
+      const errorMsg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "حدث خطأ في إلغاء الدور";
+      alert(`❌ ${errorMsg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
   return (
     <div
-      className='h-screen flex flex-col overflow-hidden'
+      className='h-fit flex flex-col overflow-hidden'
       style={{ backgroundColor: "var(--light)" }}>
       <Header title='محطة الطبيبة - الفحص النهائي' icon='👩‍⚕️' />
 
@@ -191,7 +387,7 @@ const DoctorPage = () => {
                   className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
                   {loading
                     ? "⏳ جاري الاستدعاء..."
-                    : "📢 استدعاء المريض التالي"}
+                    : "📢 استدعاء المراجع التالي"}
                 </button>
 
                 {/* رسالة الخطأ */}
@@ -212,30 +408,45 @@ const DoctorPage = () => {
             <div className='card h-full'>
               {/* Patient Info */}
               <div
-                className='rounded-lg p-4 mb-4'
+                className='flex flex-row items-stretch justify-evenly gap-4 rounded-lg p-6 mb-6'
                 style={{ backgroundColor: "var(--light)" }}>
-                <div className='flex items-center justify-between'>
+                <div className='text-center mb-4 w-[25%] h-full'>
+                  <span className='text-sm' style={{ color: "var(--dark)" }}>
+                    رقم الدور
+                  </span>
                   <div
-                    className='text-4xl font-bold'
+                    className='text-6xl font-bold my-2'
                     style={{ color: "var(--primary)" }}>
                     #{currentPatient.queueNumber}
                   </div>
-                  <div className='flex gap-4 text-sm'>
+                </div>
+
+                <div className='grid w-full h-full grid-cols-2 gap-4 mt-4'>
+                  <div className='text-center p-4 rounded-lg bg-white'>
                     <div>
-                      <span style={{ color: "var(--dark)" }}>👨 </span>
-                      <span className='font-semibold'>
+                      <div
+                        className='text-xs mb-1'
+                        style={{ color: "var(--dark)" }}>
+                        👨 الزوج{" "}
+                      </div>
+                      <div className='text-lg font-bold'>
                         {currentPatient.ReceptionData
                           ? `${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`
                           : "-"}
-                      </span>
+                      </div>
                     </div>
-                    <div>
-                      <span style={{ color: "var(--dark)" }}>👩 </span>
-                      <span className='font-semibold'>
-                        {currentPatient.ReceptionData
-                          ? `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
-                          : "-"}
-                      </span>
+                  </div>
+
+                  <div className='text-center p-4 rounded-lg bg-white'>
+                    <div
+                      className='text-xs mb-1'
+                      style={{ color: "var(--dark)" }}>
+                      👩 الزوجة{" "}
+                    </div>
+                    <div className='text-lg font-bold'>
+                      {currentPatient.ReceptionData
+                        ? `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
+                        : "-"}
                     </div>
                   </div>
                 </div>
@@ -271,7 +482,7 @@ const DoctorPage = () => {
 
                   <div className='space-y-2'>
                     <div className='flex items-center gap-2'>
-                      <span className='text-xs w-16'>HIV:</span>
+                      <span className='text-lg font-bold w-16'>HIV:</span>
                       <select
                         value={formData.maleHIVstatus}
                         onChange={(e) =>
@@ -286,7 +497,7 @@ const DoctorPage = () => {
                       </select>
                     </div>
                     <div className='flex items-center gap-2'>
-                      <span className='text-xs w-16'>HBS:</span>
+                      <span className='text-lg font-bold w-16'>HBS:</span>
                       <select
                         value={formData.maleHBSstatus}
                         onChange={(e) =>
@@ -301,7 +512,7 @@ const DoctorPage = () => {
                       </select>
                     </div>
                     <div className='flex items-center gap-2'>
-                      <span className='text-xs w-16'>HBC:</span>
+                      <span className='text-lg font-bold w-16'>HBC:</span>
                       <select
                         value={formData.maleHBCstatus}
                         onChange={(e) =>
@@ -334,7 +545,7 @@ const DoctorPage = () => {
                   style={{ backgroundColor: "var(--light)" }}>
                   <h3
                     className='text-sm font-semibold mb-2'
-                    style={{ color: "var(--secondary)" }}>
+                    style={{ color: "var(--primary)" }}>
                     👩 بيانات الزوجة
                   </h3>
                   <select
@@ -356,7 +567,7 @@ const DoctorPage = () => {
 
                   <div className='space-y-2'>
                     <div className='flex items-center gap-2'>
-                      <span className='text-xs w-16'>HIV:</span>
+                      <span className='text-lg font-bold w-16'>HIV:</span>
                       <select
                         value={formData.femaleHIVstatus}
                         onChange={(e) =>
@@ -371,7 +582,7 @@ const DoctorPage = () => {
                       </select>
                     </div>
                     <div className='flex items-center gap-2'>
-                      <span className='text-xs w-16'>HBS:</span>
+                      <span className='text-lg font-bold w-16'>HBS:</span>
                       <select
                         value={formData.femaleHBSstatus}
                         onChange={(e) =>
@@ -386,7 +597,7 @@ const DoctorPage = () => {
                       </select>
                     </div>
                     <div className='flex items-center gap-2'>
-                      <span className='text-xs w-16'>HBC:</span>
+                      <span className='text-lg font-bold w-16'>HBC:</span>
                       <select
                         value={formData.femaleHBCstatus}
                         onChange={(e) =>
@@ -431,18 +642,82 @@ const DoctorPage = () => {
               </div>
 
               {/* Buttons */}
-              <div className='flex gap-3 mt-4'>
-                <button
-                  onClick={handleSave}
-                  disabled={loading}
-                  className='btn-success flex-1 py-3 text-lg disabled:opacity-50'>
-                  {loading ? "⏳ جاري الحفظ..." : "💾 حفظ النهائي وإنهاء الدور"}
-                </button>
-                <button
-                  onClick={() => setCurrentPatient(null)}
-                  className='btn-secondary py-3 px-6 text-lg'>
-                  ❌ إلغاء
-                </button>
+              <div className='pt-4 flex flex-row items-center justify-evenly gap-4'>
+                <div className='flex flex-row gap-3 w-full items-center justify-center'>
+                  <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className='btn-success py-3 text-lg disabled:opacity-50'>
+                    {loading ? " جاري الحفظ..." : " حفظ النهائي وإنهاء الدور"}
+                  </button>
+
+                  {/* أزرار إضافية عند الاختيار من القائمة */}
+                  {isFromSidebar && (
+                    <div className='flex gap-3'>
+                      {/* زر استدعاء / إعادة نداء */}
+                      {!hasBeenCalled ? (
+                        // إذا لم يتم استدعاءه بعد → زر "استدعاء الآن"
+                        <button
+                          onClick={handleRecall}
+                          disabled={loading}
+                          className='btn-success py-3 text-lg disabled:opacity-50'
+                          style={{ backgroundColor: "var(--primary)" }}>
+                          {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
+                        </button>
+                      ) : (
+                        // إذا تم استدعاءه → زر "إعادة النداء"
+                        <button
+                          onClick={handleRecall}
+                          disabled={loading || recallCooldown > 0}
+                          className='btn-success py-3 text-lg disabled:opacity-50'
+                          style={{
+                            backgroundColor:
+                              recallCooldown > 0 ? "#9ca3af" : "var(--accent)",
+                          }}>
+                          {loading
+                            ? " جاري النداء..."
+                            : recallCooldown > 0
+                            ? ` انتظر ${recallCooldown}ث`
+                            : ` إعادة النداء (${recallCount}/3)`}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleCancelQueue}
+                        disabled={loading || recallCount < 3}
+                        className='btn-danger py-3 text-lg disabled:opacity-50'
+                        style={{
+                          backgroundColor:
+                            recallCount >= 3 ? "#dc2626" : "#9ca3af",
+                        }}>
+                        {loading ? " جاري الإلغاء..." : "لم يحضر"}
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setCurrentPatient(null);
+                      setRecallCount(0);
+                      setIsFromSidebar(false);
+                      setFormData({
+                        maleBloodType: "",
+                        femaleBloodType: "",
+                        maleHIVstatus: "NEGATIVE",
+                        femaleHIVstatus: "NEGATIVE",
+                        maleHBSstatus: "NEGATIVE",
+                        femaleHBSstatus: "NEGATIVE",
+                        maleHBCstatus: "NEGATIVE",
+                        femaleHBCstatus: "NEGATIVE",
+                        maleNotes: "",
+                        femaleNotes: "",
+                        notes: "",
+                      });
+                    }}
+                    className='bg-gray-500 text-white hover:opacity-80 cursor-pointer rounded-lg py-3 px-6 text-lg'>
+                    خروج
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -453,6 +728,8 @@ const DoctorPage = () => {
           <QueueSidebar
             stationName='الطبيبة'
             currentQueueId={currentPatient?.queueId}
+            stationId={stationId}
+            onSelectQueue={handleSelectQueueFromSidebar}
           />
         </div>
       </div>

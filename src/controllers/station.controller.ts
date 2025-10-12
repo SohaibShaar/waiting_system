@@ -167,7 +167,7 @@ export async function deleteStation(req: Request, res: Response) {
 }
 
 /**
- * قائمة المرضى المنتظرين لمحطة معينة
+ * قائمة المراجعون المنتظرين لمحطة معينة
  * GET /api/stations/:stationId/waiting-list
  */
 export async function getWaitingList(req: Request, res: Response) {
@@ -194,7 +194,7 @@ export async function getWaitingList(req: Request, res: Response) {
 
     const waitingList = await getStationWaitingList(stationId);
 
-    // حساب وقت الانتظار لكل مريض
+    // حساب وقت الانتظار لكل مراجع
     const waitingListWithTime = waitingList.map((queue) => {
       const history = queue.history[0];
       const waitingTime = history
@@ -229,7 +229,7 @@ export async function getWaitingList(req: Request, res: Response) {
 }
 
 /**
- * المريض الحالي في المحطة
+ * المراجع الحالي في المحطة
  * GET /api/stations/:stationId/current
  */
 export async function getCurrentPatient(req: Request, res: Response) {
@@ -274,7 +274,7 @@ export async function getCurrentPatient(req: Request, res: Response) {
 }
 
 /**
- * استدعاء المريض التالي
+ * استدعاء المراجع التالي
  * POST /api/stations/:stationId/call-next
  */
 export async function callNext(req: Request, res: Response) {
@@ -291,8 +291,15 @@ export async function callNext(req: Request, res: Response) {
 
     const result = await callNextPatient(stationId, calledBy || undefined);
 
+    console.log("✅ نتيجة callNextPatient:", {
+      success: result.success,
+      queueNumber: result.queueNumber,
+      displayNumber: result.displayNumber,
+    });
+
     if (result.success) {
       // إرسال حدث Socket.IO
+      console.log("📡 إرسال emitPatientCalled من callNext...");
       emitPatientCalled({
         queueNumber: result.queueNumber,
         displayNumber: result.displayNumber,
@@ -302,6 +309,7 @@ export async function callNext(req: Request, res: Response) {
 
       // تحديث بيانات الشاشة
       emitScreenDataUpdate();
+      console.log("✅ تم إرسال الإشعارات من callNext");
 
       res.json({
         success: true,
@@ -311,6 +319,7 @@ export async function callNext(req: Request, res: Response) {
         message: `تم استدعاء الدور #${result.queueNumber}`,
       });
     } else {
+      console.error("❌ فشل callNextPatient:", result.message);
       return res.status(400).json(result);
     }
   } catch (error: any) {
@@ -354,9 +363,35 @@ export async function callSpecific(req: Request, res: Response) {
       return res.status(400).json(result);
     }
 
+    console.log("✅ نتيجة callSpecificQueue:", {
+      success: result.success,
+      queueNumber: result.queueNumber,
+      displayNumber: result.displayNumber,
+      hasQueue: !!result.queue,
+    });
+
+    // إرسال حدث Socket.IO
+    if (result.displayNumber && result.queueNumber) {
+      console.log("📡 إرسال emitPatientCalled...");
+      emitPatientCalled({
+        queueNumber: result.queueNumber,
+        displayNumber: result.displayNumber,
+        stationId: stationId,
+        calledAt: new Date().toISOString(),
+      });
+
+      // تحديث بيانات الشاشة
+      emitScreenDataUpdate();
+      console.log("✅ تم إرسال الإشعارات");
+    } else {
+      console.error("❌ displayNumber أو queueNumber مفقود!");
+    }
+
     res.json({
       success: true,
       queue: result.queue,
+      displayNumber: result.displayNumber,
+      queueNumber: result.queueNumber,
       message: `تم استدعاء الدور #${queueNumber}`,
     });
   } catch (error: any) {
@@ -511,7 +546,7 @@ export async function completeService(req: Request, res: Response) {
 }
 
 /**
- * تخطي المريض الحالي
+ * تخطي المراجع الحالي
  * POST /api/stations/:stationId/skip-patient
  */
 export async function skipCurrentPatient(req: Request, res: Response) {
@@ -537,7 +572,7 @@ export async function skipCurrentPatient(req: Request, res: Response) {
 
     res.json({
       success: true,
-      message: "تم تخطي المريض",
+      message: "تم تخطي المراجع",
     });
   } catch (error: any) {
     res.status(500).json({

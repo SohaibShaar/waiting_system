@@ -72,13 +72,46 @@ const ReceptionPage = () => {
     }
   };
 
+  const calculateAge = (birthDate: string): number => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birth.getDate())
+    ) {
+      age--;
+    }
+    return age;
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // حساب العمر تلقائياً عند تغيير تاريخ الميلاد
+    if (name === "maleBirthDate") {
+      const age = calculateAge(value);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        maleAge: age.toString(),
+      }));
+    } else if (name === "femaleBirthDate") {
+      const age = calculateAge(value);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        femaleAge: age.toString(),
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,39 +218,52 @@ const ReceptionPage = () => {
 
   return (
     <div
-      className='h-screen flex flex-col overflow-hidden'
+      className='h-screen flex flex-col'
       style={{ backgroundColor: "var(--light)" }}>
-      <Header title='محطة الاستقبال' icon='📝' />
+      <Header title='الاستقبال' icon='📝' showHomeButton={true} />
 
       <div className='flex-1 flex overflow-hidden'>
         {/* Main Form Area - 65% */}
         <div className='flex-1 overflow-y-auto p-6'>
           <div className='card h-full'>
-            <div className='card-header mb-4'>
-              {editingId ? "تعديل بيانات المريض" : "إضافة مريض جديد"}
+            <div className='card-header mb-4 flex items-center justify-start'>
+              <div className=' items-center justify-between'>
+                {editingId ? (
+                  ""
+                ) : (
+                  <span className='bg-white text-2xl ml-2 cursor-default text-[#054239] rounded-full w-8 h-8 pb-1 inline-flex items-center justify-center'>
+                    +
+                  </span>
+                )}
+                <span className='text-2xl '>
+                  {editingId ? "تعديل بيانات المراجع" : "إضافة مراجع جديد"}
+                </span>
+              </div>
               {editingId && (
                 <button
                   type='button'
                   onClick={handleCancelEdit}
                   className='mr-4 px-3 py-1 rounded-lg text-sm font-semibold transition duration-200'
                   style={{
-                    backgroundColor: "var(--dark)",
+                    backgroundColor: "#dc2626",
                     color: "var(--white)",
                   }}>
-                  ✖ إلغاء
+                  ✖ إلغاء التعديل
                 </button>
               )}
             </div>
 
-            <form onSubmit={handleSubmit} className='space-y-4'>
+            <form
+              onSubmit={handleSubmit}
+              className='flex flex-col gap-1 items-stretch space-y-4 pb-4'>
               {/* Male Data - Compact Grid */}
               <div
-                className='p-3 rounded-lg'
+                className=' p-3 rounded-lg'
                 style={{ backgroundColor: "var(--light)" }}>
                 <h3
-                  className='text-sm font-semibold mb-3'
+                  className='text-sm font-bold mb-3'
                   style={{ color: "var(--primary)" }}>
-                  👨 بيانات الزوج
+                  👨 بيانات الزوج :
                 </h3>
                 <div className='grid grid-cols-3 gap-3'>
                   <input
@@ -225,7 +271,7 @@ const ReceptionPage = () => {
                     name='maleName'
                     value={formData.maleName}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='الاسم الأول *'
                     required
                   />
@@ -234,7 +280,7 @@ const ReceptionPage = () => {
                     name='maleLastName'
                     value={formData.maleLastName}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='اسم العائلة *'
                     required
                   />
@@ -243,7 +289,7 @@ const ReceptionPage = () => {
                     name='maleFatherName'
                     value={formData.maleFatherName}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='اسم الأب *'
                     required
                   />
@@ -252,7 +298,7 @@ const ReceptionPage = () => {
                     name='maleBirthDate'
                     value={formData.maleBirthDate}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     required
                   />
                   <input
@@ -260,7 +306,7 @@ const ReceptionPage = () => {
                     name='maleNationalId'
                     value={formData.maleNationalId}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='الرقم الوطني *'
                     required
                   />
@@ -269,8 +315,9 @@ const ReceptionPage = () => {
                     name='maleAge'
                     value={formData.maleAge}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
-                    placeholder='العمر *'
+                    className='input-field text-sm py-3 bg-gray-100'
+                    placeholder='العمر (تلقائي) *'
+                    readOnly
                     required
                   />
                 </div>
@@ -278,12 +325,12 @@ const ReceptionPage = () => {
 
               {/* Female Data - Compact Grid */}
               <div
-                className='p-3 rounded-lg'
+                className=' p-3 rounded-lg'
                 style={{ backgroundColor: "var(--light)" }}>
                 <h3
-                  className='text-sm font-semibold mb-3'
-                  style={{ color: "var(--secondary)" }}>
-                  👩 بيانات الزوجة
+                  className='text-sm font-bold mb-3'
+                  style={{ color: "var(--primary)" }}>
+                  👩 بيانات الزوجة :
                 </h3>
                 <div className='grid grid-cols-3 gap-3'>
                   <input
@@ -291,7 +338,7 @@ const ReceptionPage = () => {
                     name='femaleName'
                     value={formData.femaleName}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='الاسم الأول *'
                     required
                   />
@@ -300,7 +347,7 @@ const ReceptionPage = () => {
                     name='femaleLastName'
                     value={formData.femaleLastName}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='اسم العائلة *'
                     required
                   />
@@ -309,7 +356,7 @@ const ReceptionPage = () => {
                     name='femaleFatherName'
                     value={formData.femaleFatherName}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='اسم الأب *'
                     required
                   />
@@ -318,7 +365,7 @@ const ReceptionPage = () => {
                     name='femaleBirthDate'
                     value={formData.femaleBirthDate}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     required
                   />
                   <input
@@ -326,7 +373,7 @@ const ReceptionPage = () => {
                     name='femaleNationalId'
                     value={formData.femaleNationalId}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
+                    className='input-field text-sm py-3'
                     placeholder='الرقم الوطني *'
                     required
                   />
@@ -335,43 +382,46 @@ const ReceptionPage = () => {
                     name='femaleAge'
                     value={formData.femaleAge}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-2'
-                    placeholder='العمر *'
+                    className='input-field text-sm py-3 bg-gray-100'
+                    placeholder='العمر (تلقائي) *'
+                    readOnly
                     required
                   />
                 </div>
               </div>
 
               {/* Additional Info - Compact */}
-              <div className='grid grid-cols-3 gap-3'>
+              <div className='grid grid-cols-3 gap-4'>
                 <input
                   type='tel'
                   name='phoneNumber'
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
-                  className='input-field text-sm py-2'
+                  className='input-field text-sm py-3'
                   placeholder='رقم الهاتف'
                 />
-                <select
-                  name='priority'
-                  value={formData.priority}
-                  onChange={handleInputChange}
-                  className='input-field text-sm py-2'>
-                  <option value='0'>أولوية عادية</option>
-                  <option value='1'>أولوية عالية</option>
-                </select>
+
                 <textarea
                   name='notes'
                   value={formData.notes}
                   onChange={handleInputChange}
-                  className='input-field text-sm py-2'
+                  className='input-field text-sm py-3'
                   placeholder='ملاحظات'
                   rows={1}
                 />
+                <select
+                  disabled
+                  name='priority'
+                  value={formData.priority}
+                  onChange={handleInputChange}
+                  className='input-field text-sm py-3 disabled:opacity-50'>
+                  <option value='0'>أولوية عادية</option>
+                  <option value='1'>أولوية عالية</option>
+                </select>
               </div>
 
               {/* Submit Button */}
-              <div className='flex justify-center pt-2'>
+              <div className='flex justify-center'>
                 <button
                   type='submit'
                   disabled={loading}
@@ -394,9 +444,9 @@ const ReceptionPage = () => {
           <div className='h-full flex flex-col'>
             <div
               className='p-3 font-bold text-white text-center'
-              style={{ backgroundColor: "var(--primary)" }}>
+              style={{ backgroundColor: "#988561" }}>
               <div className='text-base'>
-                المرضى المضافون اليوم ({todayPatients.length})
+                المراجعون المضافون اليوم ({todayPatients.length})
               </div>
             </div>
 

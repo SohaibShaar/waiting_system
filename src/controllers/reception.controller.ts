@@ -9,7 +9,7 @@ import { emitScreenDataUpdate, emitNewQueue, emitQueueUpdate } from "..";
 
 /**
  * إضافة بيانات الاستقبال - نقطة البداية في النظام
- * يتم إنشاء مريض جديد ودور جديد تلقائياً
+ * يتم إنشاء مراجع جديد ودور جديد تلقائياً
  * POST /api/reception
  */
 export async function addReceptionData(req: Request, res: Response) {
@@ -53,7 +53,7 @@ export async function addReceptionData(req: Request, res: Response) {
       });
     }
 
-    // إنشاء مريض ودور جديد مع بيانات الاستقبال
+    // إنشاء مراجع ودور جديد مع بيانات الاستقبال
     const result = await createReceptionData({
       maleName,
       maleLastName,
@@ -90,7 +90,7 @@ export async function addReceptionData(req: Request, res: Response) {
 
     res.status(201).json({
       success: true,
-      message: "تم إنشاء المريض والدور وحفظ بيانات الاستقبال بنجاح",
+      message: "تم إنشاء المراجع والدور وحفظ بيانات الاستقبال بنجاح",
       patient: result.patient,
       queue: result.queue,
       queueNumber: result.queueNumber,

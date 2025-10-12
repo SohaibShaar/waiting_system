@@ -10,26 +10,39 @@ interface QueueItem {
   status: string;
   priority: number;
   currentStation: {
+    id: number;
     name: string;
     displayNumber: number;
   } | null;
   patient: {
+    id: number;
     name: string;
+    phoneNumber?: string;
+    nationalId?: string;
   };
   ReceptionData?: {
+    id: number;
     maleName: string;
     maleLastName: string;
     femaleName: string;
     femaleLastName: string;
+    phoneNumber?: string;
   };
 }
 
 interface QueueSidebarProps {
   stationName: string;
   currentQueueId?: number;
+  stationId?: number | null;
+  onSelectQueue?: (queue: QueueItem) => void; // callback عند اختيار دور
 }
 
-const QueueSidebar = ({ stationName, currentQueueId }: QueueSidebarProps) => {
+const QueueSidebar = ({
+  stationName,
+  currentQueueId,
+  stationId: _stationId,
+  onSelectQueue,
+}: QueueSidebarProps) => {
   const [queues, setQueues] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -125,6 +138,13 @@ const QueueSidebar = ({ stationName, currentQueueId }: QueueSidebarProps) => {
     }
   };
 
+  // عند النقر على بطاقة المراجع
+  const handleQueueClick = (queue: QueueItem) => {
+    if (onSelectQueue) {
+      onSelectQueue(queue);
+    }
+  };
+
   return (
     <div
       className='h-full flex flex-col'
@@ -132,7 +152,7 @@ const QueueSidebar = ({ stationName, currentQueueId }: QueueSidebarProps) => {
       {/* Header */}
       <div
         className='p-4 font-bold text-white text-center'
-        style={{ backgroundColor: "var(--primary)" }}>
+        style={{ backgroundColor: "#988561" }}>
         <div className='text-lg'>📋 قائمة الانتظار</div>
         <div className='text-sm opacity-90 mt-1'>{stationName}</div>
       </div>
@@ -151,7 +171,8 @@ const QueueSidebar = ({ stationName, currentQueueId }: QueueSidebarProps) => {
           queues.map((queue) => (
             <div
               key={queue.id}
-              className='p-3 rounded-lg shadow-sm border-2 transition duration-200 hover:shadow-md'
+              onClick={() => handleQueueClick(queue)}
+              className='p-3 rounded-lg shadow-sm border-2 transition duration-200 hover:shadow-md cursor-pointer hover:border-primary'
               style={{
                 backgroundColor:
                   queue.id === currentQueueId ? "var(--light)" : "var(--white)",
@@ -204,7 +225,14 @@ const QueueSidebar = ({ stationName, currentQueueId }: QueueSidebarProps) => {
                   color: "var(--secondary)",
                   borderColor: "var(--light)",
                 }}>
-                📍 {queue.currentStation?.name || "جديد"}
+                {queue.currentStation?.name || "جديد"}
+              </div>
+
+              {/* Click indicator */}
+              <div
+                className='text-xs mt-2 text-center'
+                style={{ color: "var(--accent)" }}>
+                👆 اضغط للتفاصيل
               </div>
             </div>
           ))
@@ -215,9 +243,8 @@ const QueueSidebar = ({ stationName, currentQueueId }: QueueSidebarProps) => {
       <div
         className='p-3 text-center text-sm border-t'
         style={{
-          backgroundColor: "var(--light)",
-          color: "var(--dark)",
-          borderColor: "var(--light)",
+          backgroundColor: "#054239",
+          color: "#ffffff",
         }}>
         إجمالي الأدوار: <span className='font-bold'>{queues.length}</span>
       </div>

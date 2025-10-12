@@ -35,10 +35,22 @@ function HomePage() {
             backgroundColor: "rgba(255, 255, 255, 0.15)",
             backdropFilter: "blur(10px)",
           }}>
-          <h1 className='text-5xl font-bold text-white mb-4'>
-            مخبر ما قبل الزواج - حماة
-          </h1>
-          <p className='text-xl text-white opacity-90'>نظام إدارة الأدوار</p>
+          <div className='flex flex-row items-center justify-center'>
+            <img
+              src='/hamalogo2.png'
+              alt='logo'
+              className='w-45 h-30 items-center justify-center'
+            />
+
+            <div className='flex flex-col'>
+              <h1 className='text-5xl font-bold text-white mb-4'>
+                مخبر ما قبل الزواج - حماة
+              </h1>
+              <p className='text-xl text-white opacity-90'>
+                نظام إدارة الأدوار
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
@@ -76,7 +88,7 @@ function HomePage() {
                 style={{ color: "var(--primary)" }}>
                 الاستقبال
               </h2>
-              <p style={{ color: "var(--dark)" }}>إضافة مرضى جدد</p>
+              <p style={{ color: "var(--dark)" }}>إضافة مراجع جديد</p>
             </div>
           </Link>
 

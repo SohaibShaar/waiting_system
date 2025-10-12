@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 // ============================================
 
 /**
- * بدء تقديم الخدمة للمريض
+ * بدء تقديم الخدمة  للمراجع
  */
 async function startService(queueId: number, stationId: number) {
   // الحصول على آخر سجل CALLED فقط

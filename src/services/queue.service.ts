@@ -47,7 +47,7 @@ async function resetQueueNumbers(): Promise<void> {
 // ============================================
 
 /**
- * إنشاء دور جديد للمريض
+ * إنشاء دور جديد للمراجع
  */
 async function createNewQueue(patientData: {
   name: string;
@@ -56,7 +56,7 @@ async function createNewQueue(patientData: {
   priority?: number;
   notes?: string;
 }) {
-  // 1. إنشاء/إيجاد المريض
+  // 1. إنشاء/إيجاد المراجع
   const patient = await upsertPatient({
     name: patientData.name,
     ...(patientData.phoneNumber && { phoneNumber: patientData.phoneNumber }),
@@ -105,7 +105,7 @@ async function createNewQueue(patientData: {
   // 6. تحديث آخر رقم دور
   await updateLastQueueNumber(newQueueNumber);
 
-  console.log(`✅ تم إنشاء الدور #${newQueueNumber} للمريض ${patient.name}`);
+  console.log(`✅ تم إنشاء الدور #${newQueueNumber} للمراجع ${patient.name}`);
 
   return {
     queue,
@@ -120,7 +120,7 @@ async function createNewQueue(patientData: {
 // ============================================
 
 /**
- * الحصول على قائمة المرضى المنتظرين لمحطة معينة
+ * الحصول على قائمة المراجعون المنتظرين لمحطة معينة
  */
 async function getStationWaitingList(stationId: number) {
   const queues = await prisma.queue.findMany({
@@ -149,7 +149,7 @@ async function getStationWaitingList(stationId: number) {
 }
 
 /**
- * الحصول على المريض الحالي في المحطة
+ * الحصول على المراجع الحالي في المحطة
  */
 async function getCurrentPatientInStation(stationId: number) {
   return await prisma.queue.findFirst({
@@ -304,7 +304,7 @@ async function cancelQueue(queueId: number, reason?: string) {
 }
 
 /**
- * تخطي مريض (يعود لآخر القائمة)
+ * تخطي مراجع (يعود لآخر القائمة)
  */
 async function skipPatient(queueId: number, stationId: number) {
   // الحصول على آخر سجل CALLED أو IN_PROGRESS فقط

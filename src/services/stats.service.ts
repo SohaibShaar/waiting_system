@@ -79,7 +79,7 @@ async function getStationStats(stationId?: number) {
 }
 
 /**
- * تاريخ زيارات مريض معين
+ * تاريخ زيارات مراجع معين
  */
 async function getPatientHistory(patientId: number) {
   return await prisma.completedVisit.findMany({

@@ -8,7 +8,7 @@ import { getStationWaitingList } from "./queue.service";
 const prisma = new PrismaClient();
 
 /**
- * إنشاء أو إيجاد مريض
+ * إنشاء أو إيجاد مراجع
  */
 async function upsertPatient(data: {
   name: string;
@@ -30,7 +30,7 @@ async function upsertPatient(data: {
     }
   }
 
-  // إنشاء مريض جديد
+  // إنشاء مراجع جديد
   return await prisma.patient.create({
     data: {
       name: data.name,
@@ -41,7 +41,7 @@ async function upsertPatient(data: {
 }
 
 /**
- * البحث عن مريض
+ * البحث عن مراجع
  */
 async function findPatient(criteria: {
   id?: number;
@@ -66,20 +66,20 @@ async function findPatient(criteria: {
 }
 
 // ============================================
-// 6️⃣ استدعاء المرضى
+// 6️⃣ استدعاء المراجعون
 // ============================================
 
 /**
- * استدعاء المريض التالي في قائمة المحطة
+ * استدعاء المراجع التالي في قائمة المحطة
  */
 async function callNextPatient(stationId: number, calledBy?: string) {
-  // 1. الحصول على أول مريض في قائمة الانتظار
+  // 1. الحصول على أول مراجع في قائمة الانتظار
   const waitingList = await getStationWaitingList(stationId);
 
   if (waitingList.length === 0) {
     return {
       success: false,
-      message: "⚠️ لا يوجد مرضى في قائمة الانتظار",
+      message: "⚠️ لا يوجد مراجعين في قائمة الانتظار",
     };
   }
 
@@ -88,7 +88,7 @@ async function callNextPatient(stationId: number, calledBy?: string) {
   if (!nextQueue) {
     return {
       success: false,
-      message: "⚠️ لا يوجد مرضى في قائمة الانتظار",
+      message: "⚠️ لا يوجد مراجعين في قائمة الانتظار",
     };
   }
 
@@ -167,29 +167,29 @@ async function callSpecificQueue(
     };
   }
 
-  // الحصول على آخر سجل WAITING فقط
-  const lastWaitingRecord = await prisma.queueHistory.findFirst({
+  // الحصول على آخر سجل في هذه المحطة (أي حالة)
+  const lastRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queue.id,
       stationId: stationId,
-      status: QueueStatus.WAITING,
     },
     orderBy: {
       createdAt: "desc", // الأحدث أولاً
     },
   });
 
-  if (!lastWaitingRecord) {
+  if (!lastRecord) {
     return {
       success: false,
-      message: "❌ لم يتم العثور على سجل انتظار لهذا الدور",
+      message: "❌ لم يتم العثور على سجل لهذا الدور في هذه المحطة",
     };
   }
 
-  // تحديث السجل المحدد فقط إلى CALLED
+  // إذا كان السجل الأخير WAITING، نقوم بتحديثه إلى CALLED
+  // إذا كان في حالة أخرى (CALLED, IN_PROGRESS)، نقوم بتحديثه أيضاً (إعادة نداء)
   await prisma.queueHistory.update({
     where: {
-      id: lastWaitingRecord.id,
+      id: lastRecord.id,
     },
     data: {
       status: QueueStatus.CALLED,
@@ -198,7 +198,25 @@ async function callSpecificQueue(
     },
   });
 
-  return { success: true, queue };
+  // الحصول على المعلومات المحدثة
+  const updatedQueue = await prisma.queue.findUnique({
+    where: { id: queue.id },
+    include: {
+      patient: true,
+      currentStation: true,
+    },
+  });
+
+  console.log(
+    `📢 تم استدعاء الدور #${updatedQueue?.queueNumber} → الشاشة ${updatedQueue?.currentStation.displayNumber}`
+  );
+
+  return {
+    success: true,
+    queue: updatedQueue,
+    displayNumber: updatedQueue?.currentStation.displayNumber,
+    queueNumber: updatedQueue?.queueNumber,
+  };
 }
 
 export { upsertPatient, findPatient, callNextPatient, callSpecificQueue };

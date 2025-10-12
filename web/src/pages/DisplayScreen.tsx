@@ -17,14 +17,14 @@ const DisplayScreen = () => {
   const [showAudioPrompt, setShowAudioPrompt] = useState(true);
   const [isProcessingAnnouncement, setIsProcessingAnnouncement] =
     useState(false);
+  const [pendingCallsCount, setPendingCallsCount] = useState(0); // لتتبع التغييرات
   const pendingCallsRef = useRef<CalledPatient[]>([]);
-  const [, forceUpdate] = useState({});
 
   const getStationName = useCallback((displayNumber: number) => {
     const stations: { [key: number]: string } = {
       1: "الاستقبال",
       2: "شباك واحد",
-      3: "شباك اثنين",
+      3: "غرفة الطبيب",
       4: "شباك ثلاثة",
     };
     return stations[displayNumber] || `الشاشة ${displayNumber}`;
@@ -51,6 +51,10 @@ const DisplayScreen = () => {
 
   // معالجة طابور الاستدعاءات
   useEffect(() => {
+    console.log(
+      `🔍 useEffect triggered - pendingCallsCount: ${pendingCallsCount}, isProcessing: ${isProcessingAnnouncement}, queueLength: ${pendingCallsRef.current.length}`
+    );
+
     if (isProcessingAnnouncement || pendingCallsRef.current.length === 0) {
       return;
     }
@@ -58,6 +62,11 @@ const DisplayScreen = () => {
     const processNextCall = async () => {
       setIsProcessingAnnouncement(true);
       const nextCall = pendingCallsRef.current[0];
+
+      if (!nextCall) {
+        setIsProcessingAnnouncement(false);
+        return;
+      }
 
       console.log(`🔄 معالجة الدور #${nextCall.queueNumber}`);
       console.log(`📋 عدد الأدوار المنتظرة: ${pendingCallsRef.current.length}`);
@@ -76,29 +85,30 @@ const DisplayScreen = () => {
           console.log(`🔇 الصوت معطل - لن يتم تشغيل النداء`);
         }
 
-        // 3. الانتظار 5 ثوانٍ على الأقل (بعد الصوت)
-        console.log(`⏳ انتظار 5 ثوانٍ للدور #${nextCall.queueNumber}`);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        // 4. إزالة الدور من الطابور
+        // 3. إزالة الدور من الطابور مباشرة (بدون انتظار)
         pendingCallsRef.current = pendingCallsRef.current.slice(1);
         console.log(`✅ تم الانتهاء من معالجة الدور #${nextCall.queueNumber}`);
         console.log(`📋 الأدوار المتبقية: ${pendingCallsRef.current.length}`);
 
         // إعادة تشغيل المعالجة للدور التالي
-        forceUpdate({});
+        setPendingCallsCount(pendingCallsRef.current.length);
       } catch (error) {
         console.error("❌ خطأ في معالجة الدور:", error);
         // حتى في حالة الخطأ، نزيل الدور من الطابور
         pendingCallsRef.current = pendingCallsRef.current.slice(1);
-        forceUpdate({});
+        setPendingCallsCount(pendingCallsRef.current.length);
       } finally {
         setIsProcessingAnnouncement(false);
       }
     };
 
     processNextCall();
-  }, [isProcessingAnnouncement, audioEnabled, getStationName]);
+  }, [
+    isProcessingAnnouncement,
+    audioEnabled,
+    getStationName,
+    pendingCallsCount,
+  ]); // إضافة pendingCallsCount
 
   useEffect(() => {
     const newSocket = io("http://localhost:3003");
@@ -116,41 +126,32 @@ const DisplayScreen = () => {
     });
 
     newSocket.on("patient-called", (data: CalledPatient) => {
-      console.log("📢 مريض جديد:", data);
+      console.log("📢 استقبال استدعاء جديد:", data);
 
-      // تجنب التكرار - تحقق من عدم وجود نفس الاستدعاء
-      setRecentCalls((prev) => {
-        const isDuplicate = prev.some(
-          (call) =>
-            call.queueNumber === data.queueNumber &&
-            call.displayNumber === data.displayNumber &&
-            Math.abs(
-              new Date(call.calledAt).getTime() -
-                new Date(data.calledAt).getTime()
-            ) < 2000
-        );
-
-        if (isDuplicate) {
-          console.log("⚠️ تجاهل استدعاء مكرر");
-          return prev;
-        }
-
-        return prev; // لا نضيف مباشرة، سنضيفه من خلال الطابور
-      });
-
-      // إضافة إلى طابور الانتظار
-      pendingCallsRef.current.push(data);
-      console.log(`➕ تمت إضافة الدور #${data.queueNumber} إلى الطابور`);
-      console.log(
-        `📋 عدد الأدوار في الطابور: ${pendingCallsRef.current.length}`
+      // التحقق من عدم وجود الدور في الطابور
+      const isInQueue = pendingCallsRef.current.some(
+        (call) =>
+          call.queueNumber === data.queueNumber &&
+          call.displayNumber === data.displayNumber
       );
-      forceUpdate({}); // إعادة تشغيل effect
+
+      if (!isInQueue) {
+        pendingCallsRef.current.push(data);
+        console.log(`➕ تمت إضافة الدور #${data.queueNumber} إلى الطابور`);
+        console.log(
+          `📋 عدد الأدوار في الطابور: ${pendingCallsRef.current.length}`
+        );
+        setPendingCallsCount(pendingCallsRef.current.length); // ✅ تحديث العداد لتشغيل useEffect
+      } else {
+        console.log(`⚠️ الدور #${data.queueNumber} موجود بالفعل في الطابور`);
+      }
     });
 
     return () => {
+      console.log("🔌 إغلاق اتصال WebSocket");
       newSocket.close();
     };
-  }, [getStationName, audioEnabled]);
+  }, []); // ✅ Empty dependency array - يتم إنشاؤه مرة واحدة فقط
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString("en-US", {
@@ -164,7 +165,7 @@ const DisplayScreen = () => {
     <div
       className='min-h-screen text-white flex flex-col'
       style={{
-        background: `linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)`,
+        background: "#054239",
       }}>
       {/* Audio Prompt Overlay */}
       {showAudioPrompt && (
@@ -339,16 +340,23 @@ const DisplayScreen = () => {
       <div
         className='p-6 mt-auto shadow-lg w-full text-center justify-center items-center flex'
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}>
-        <div className='max-w-7xl mx-auto text-center justify-center items-center flex flex-col'>
-          <p className='text-xl'>مخبر ما قبل الزواج - حماة</p>
-          <p className='text-lg mt-2'>
-            {new Date().toLocaleDateString("ar-SY", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+        <div className='text-center justify-center items-center flex flex-row'>
+          <img
+            src='/eagle.png'
+            alt='logo'
+            className='w-50 h-25 items-center justify-center'
+          />
+          <div className='flex flex-col items-center justify-center'>
+            <p className='text-xl'>مخبر ما قبل الزواج - حماة</p>
+            <p className='text-lg mt-2'>
+              {new Date().toLocaleDateString("ar-SY", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -22,7 +22,7 @@ export async function createQueue(req: Request, res: Response) {
     if (!name) {
       return res.status(400).json({
         success: false,
-        error: "اسم المريض مطلوب",
+        error: "اسم المراجع مطلوب",
       });
     }
 
@@ -165,7 +165,7 @@ export async function updateQueuePriority(req: Request, res: Response) {
 export async function cancelQueueById(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id as string);
-    const { reason } = req.body;
+    const reason = req.body?.reason || "لم يحضر المراجع"; // قيمة افتراضية
 
     if (isNaN(id)) {
       return res.status(400).json({
@@ -174,13 +174,16 @@ export async function cancelQueueById(req: Request, res: Response) {
       });
     }
 
-    await cancelQueue(id, reason || undefined);
+    await cancelQueue(id, reason);
+
+    console.log(`✅ تم إلغاء الدور #${id} - السبب: ${reason}`);
 
     res.json({
       success: true,
       message: "تم إلغاء الدور",
     });
   } catch (error: any) {
+    console.error(`❌ خطأ في إلغاء الدور:`, error);
     res.status(500).json({
       success: false,
       error: error.message,

@@ -28,7 +28,7 @@ async function updateLastQueueNumber(number: number): Promise<void> {
 }
 
 /**
- * إضافة بيانات الاستقبال مع إنشاء مريض ودور جديد تلقائياً
+ * إضافة بيانات الاستقبال مع إنشاء مراجع ودور جديد تلقائياً
  * هذه هي نقطة البداية في النظام
  */
 async function createReceptionData(data: {
@@ -48,7 +48,7 @@ async function createReceptionData(data: {
   notes?: string;
   priority?: number;
 }) {
-  // 1. إنشاء المريض باسم الذكر ورقمه الوطني
+  // 1. إنشاء المراجع باسم الذكر ورقمه الوطني
   const patient = await prisma.patient.create({
     data: {
       name: `${data.maleName} ${data.maleLastName}`,
@@ -58,7 +58,7 @@ async function createReceptionData(data: {
   });
 
   console.log(
-    `✅ تم إنشاء المريض: ${patient.name} - رقم وطني: ${patient.nationalId}`
+    `✅ تم إنشاء المراجع: ${patient.name} - رقم وطني: ${patient.nationalId}`
   );
 
   // 2. الحصول على رقم الدور التالي
@@ -122,14 +122,14 @@ async function createReceptionData(data: {
       queueId: queue.id,
       stationId: nextStation.id,
       status: QueueStatus.WAITING,
-      // لا نضع calledAt لأن المريض لم يتم مناداته بعد
+      // لا نضع calledAt لأن المراجع لم يتم مناداته بعد
     },
   });
 
   // 8. تحديث آخر رقم دور
   await updateLastQueueNumber(newQueueNumber);
 
-  console.log(`✅ تم إنشاء الدور #${newQueueNumber} للمريض ${patient.name}`);
+  console.log(`✅ تم إنشاء الدور #${newQueueNumber} للمراجع ${patient.name}`);
 
   // 9. إنشاء بيانات الاستقبال
   const receptionData = await prisma.receptionData.create({

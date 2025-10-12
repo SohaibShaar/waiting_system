@@ -41,19 +41,19 @@ router.delete("/:id", deleteStation);
 
 /**
  * GET /api/stations/:stationId/waiting-list
- * قائمة المرضى المنتظرين لمحطة معينة
+ * قائمة المراجعون المنتظرين لمحطة معينة
  */
 router.get("/:stationId/waiting-list", getWaitingList);
 
 /**
  * GET /api/stations/:stationId/current
- * المريض الحالي في المحطة
+ * المراجع الحالي في المحطة
  */
 router.get("/:stationId/current", getCurrentPatient);
 
 /**
  * POST /api/stations/:stationId/call-next
- * استدعاء المريض التالي
+ * استدعاء المراجع التالي
  */
 router.post("/:stationId/call-next", callNext);
 
@@ -77,7 +77,7 @@ router.post("/:stationId/complete-service", completeService);
 
 /**
  * POST /api/stations/:stationId/skip-patient
- * تخطي المريض الحالي
+ * تخطي المراجع الحالي
  */
 router.post("/:stationId/skip-patient", skipCurrentPatient);
 

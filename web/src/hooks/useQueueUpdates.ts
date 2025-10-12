@@ -36,7 +36,7 @@ export const useQueueUpdates = (onUpdate?: (update: QueueUpdate) => void) => {
     });
 
     newSocket.on("patient-called", (data: any) => {
-      console.log("📢 استدعاء مريض:", data);
+      console.log("📢 استدعاء مراجع:", data);
       setUpdateTrigger((prev) => prev + 1);
       if (onUpdate) {
         onUpdate({ type: "QUEUE_CALLED", data });

@@ -49,7 +49,7 @@ async function createDoctorData(data: {
 
   console.log(`✅ تم حفظ بيانات الطبيب للدور #${doctorData.queue.queueNumber}`);
 
-  // لا يتم استدعاء المريض التالي تلقائياً
+  // لا يتم استدعاء المراجع التالي تلقائياً
   // يجب الاستدعاء يدوياً من واجهة المستخدم
 
   return {

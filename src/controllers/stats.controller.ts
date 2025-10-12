@@ -44,7 +44,7 @@ export async function getAllStationsStats(req: Request, res: Response) {
   try {
     const stationsStats = await getStationStats();
 
-    // الحصول على المريض الحالي لكل محطة
+    // الحصول على المراجع الحالي لكل محطة
     const stationsWithCurrent = await Promise.all(
       stationsStats.map(async (station) => {
         const currentQueue = await prisma.queue.findFirst({
@@ -125,7 +125,7 @@ export async function getStationStatistics(req: Request, res: Response) {
       });
     }
 
-    // حساب عدد المرضى الذين تمت خدمتهم اليوم
+    // حساب عدد المراجعون الذين تمت خدمتهم اليوم
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
