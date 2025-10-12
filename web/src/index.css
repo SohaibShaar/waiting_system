@@ -1,70 +1,111 @@
 @import "tailwindcss";
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+  --primary: #054239;
+  --secondary: #b9a779;
+  --dark: #3d3a3b;
+  --light: #edebe0;
+  --white: #ffffff;
+  --primary-hover: #043329;
+  --secondary-hover: #a89668;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: "Cairo", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--light);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+* {
+  direction: rtl;
+  text-align: right;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer components {
+  .btn-primary {
+    @apply font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg;
+    background-color: var(--primary);
+    color: var(--white);
   }
-  a:hover {
-    color: #747bff;
+
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
   }
-  button {
-    background-color: #f9f9f9;
+
+  .btn-secondary {
+    @apply font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg;
+    background-color: var(--secondary);
+    color: var(--white);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--secondary-hover);
+  }
+
+  .btn-success {
+    @apply font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg;
+    background-color: var(--primary);
+    color: var(--white);
+  }
+
+  .btn-success:hover {
+    background-color: var(--primary-hover);
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg;
+  }
+
+  .btn-outline {
+    @apply font-bold py-2 px-4 rounded-lg transition duration-200 border-2;
+    border-color: var(--primary);
+    color: var(--primary);
+    background-color: transparent;
+  }
+
+  .btn-outline:hover {
+    background-color: var(--primary);
+    color: var(--white);
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 transition duration-200;
+    border: 2px solid var(--light);
+    background-color: var(--white);
+  }
+
+  .input-field:focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(185, 167, 121, 0.1);
+  }
+
+  .card {
+    @apply rounded-lg shadow-lg p-6;
+    background-color: var(--white);
+  }
+
+  .card-header {
+    @apply rounded-t-lg p-4 font-bold text-lg;
+    background-color: var(--primary);
+    color: var(--white);
+  }
+
+  .badge-primary {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+    background-color: var(--primary);
+    color: var(--white);
+  }
+
+  .badge-secondary {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+    background-color: var(--secondary);
+    color: var(--white);
   }
 }

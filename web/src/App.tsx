@@ -1,51 +1,140 @@
-import { useEffect } from "react";
-import { useSocket } from "./hooks/useSocket";
-import { ScreenDisplay } from "./components/ScreenDisplay";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import DisplayScreen from "./pages/DisplayScreen";
+import ReceptionPage from "./pages/ReceptionPage";
+import AccountingPage from "./pages/AccountingPage";
+import LabPage from "./pages/LabPage";
+import DoctorPage from "./pages/DoctorPage";
+import "./App.css";
 
 function App() {
-  const { isConnected, subscribeToDisplay, on } = useSocket();
-
-  useEffect(() => {
-    // الاشتراك في الشاشة العامة عند الاتصال
-    if (isConnected) {
-      subscribeToDisplay();
-
-      // الاستماع لتحديثات الطابور
-      on("queue-updated", (data) => {
-        console.log("Queue updated:", data);
-        // يمكن إضافة منطق التحديث التلقائي هنا
-      });
-
-      // الاستماع لتحديثات المحطات
-      on("station-updated", (data) => {
-        console.log("Station updated:", data);
-        // يمكن إضافة منطق التحديث التلقائي هنا
-      });
-    }
-  }, [isConnected, subscribeToDisplay, on]);
-
   return (
-    <div className='min-h-screen bg-gray-100'>
-      <div className='container mx-auto p-4'>
-        <h1 className='text-3xl font-bold text-center mb-8'>
-          نظام إدارة الأدوار
-        </h1>
+    <Router>
+      <Routes>
+        <Route path='/' element={<HomePage />} />
+        <Route path='/display' element={<DisplayScreen />} />
+        <Route path='/reception' element={<ReceptionPage />} />
+        <Route path='/accounting' element={<AccountingPage />} />
+        <Route path='/lab' element={<LabPage />} />
+        <Route path='/doctor' element={<DoctorPage />} />
+      </Routes>
+    </Router>
+  );
+}
 
-        <div className='bg-white rounded-lg shadow-md p-6'>
-          <div className='flex items-center justify-between mb-6'>
-            <h2 className='text-xl font-semibold'>الشاشة العامة</h2>
+function HomePage() {
+  return (
+    <div
+      className='min-h-screen flex items-center justify-center p-8'
+      style={{
+        background: "#054239",
+      }}>
+      <div className='max-w-5xl w-full'>
+        <div
+          className='text-center mb-12 p-8 rounded-2xl shadow-xl'
+          style={{
+            backgroundColor: "rgba(255, 255, 255, 0.15)",
+            backdropFilter: "blur(10px)",
+          }}>
+          <h1 className='text-5xl font-bold text-white mb-4'>
+            مخبر ما قبل الزواج - حماة
+          </h1>
+          <p className='text-xl text-white opacity-90'>نظام إدارة الأدوار</p>
+        </div>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          {/* Display Screen */}
+          <Link to='/display' className='transform hover:scale-105 transition'>
             <div
-              className={`px-3 py-1 rounded-full text-sm ${
-                isConnected
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
-              }`}>
-              {isConnected ? "متصل" : "غير متصل"}
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>📺</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                الشاشة العامة
+              </h2>
+              <p style={{ color: "var(--dark)" }}>عرض الاستدعاءات المباشرة</p>
             </div>
-          </div>
+          </Link>
 
-          {/* عرض بيانات الشاشة */}
-          <ScreenDisplay refreshInterval={5} />
+          {/* Reception */}
+          <Link
+            to='/reception'
+            className='transform hover:scale-105 transition'>
+            <div
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>📝</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                الاستقبال
+              </h2>
+              <p style={{ color: "var(--dark)" }}>إضافة مرضى جدد</p>
+            </div>
+          </Link>
+
+          {/* Accounting */}
+          <Link
+            to='/accounting'
+            className='transform hover:scale-105 transition'>
+            <div
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>💰</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                المحاسبة
+              </h2>
+              <p style={{ color: "var(--dark)" }}>تسجيل المدفوعات</p>
+            </div>
+          </Link>
+
+          {/* Lab */}
+          <Link to='/lab' className='transform hover:scale-105 transition'>
+            <div
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>🔬</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                المختبر
+              </h2>
+              <p style={{ color: "var(--dark)" }}>الفحوصات الأولية</p>
+            </div>
+          </Link>
+
+          {/* Doctor */}
+          <Link to='/doctor' className='transform hover:scale-105 transition'>
+            <div
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>👩‍⚕️</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                الطبيبة
+              </h2>
+              <p style={{ color: "var(--dark)" }}>الفحص النهائي</p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

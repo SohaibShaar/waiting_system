@@ -13,7 +13,12 @@ import {
   callSpecificQueue,
 } from "../services/patient.service";
 import { PrismaClient } from "../generated/prisma";
-import { emitPatientCalled, emitScreenDataUpdate, emitStationUpdate } from "..";
+import {
+  emitPatientCalled,
+  emitScreenDataUpdate,
+  emitStationUpdate,
+  emitQueueUpdate,
+} from "..";
 
 const prisma = new PrismaClient();
 
@@ -295,7 +300,8 @@ export async function callNext(req: Request, res: Response) {
         calledAt: new Date().toISOString(),
       });
 
-      emitScreenDataUpdate(); // تحديث بيانات الشاشة
+      // تحديث بيانات الشاشة
+      emitScreenDataUpdate();
 
       res.json({
         success: true,
@@ -452,6 +458,13 @@ export async function completeService(req: Request, res: Response) {
         nextStation: result.nextStation,
       });
 
+      // تحديث القائمة
+      emitQueueUpdate({
+        type: "STATION_COMPLETED",
+        queueId,
+        stationId,
+      });
+
       emitScreenDataUpdate(); // تحديث بيانات الشاشة
 
       res.json({
@@ -469,6 +482,13 @@ export async function completeService(req: Request, res: Response) {
         status: result.completed ? "COMPLETED" : "MOVED",
         completedAt: new Date().toISOString(),
         nextStation: result.nextStation,
+      });
+
+      // تحديث القائمة
+      emitQueueUpdate({
+        type: "COMPLETED",
+        queueId,
+        stationId,
       });
 
       emitScreenDataUpdate(); // تحديث بيانات الشاشة

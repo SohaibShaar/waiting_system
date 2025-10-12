@@ -14,24 +14,35 @@ const prisma = new PrismaClient();
  * بدء تقديم الخدمة للمريض
  */
 async function startService(queueId: number, stationId: number) {
-  const updated = await prisma.queueHistory.updateMany({
+  // الحصول على آخر سجل CALLED فقط
+  const lastCalledRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queueId,
       stationId: stationId,
       status: QueueStatus.CALLED,
+    },
+    orderBy: {
+      createdAt: "desc", // الأحدث أولاً
+    },
+  });
+
+  if (!lastCalledRecord) {
+    return {
+      success: false,
+      message: "❌ لم يتم العثور على دور مُستدعى",
+    };
+  }
+
+  // تحديث السجل المحدد فقط إلى IN_PROGRESS
+  await prisma.queueHistory.update({
+    where: {
+      id: lastCalledRecord.id,
     },
     data: {
       status: QueueStatus.IN_PROGRESS,
       startedAt: new Date(),
     },
   });
-
-  if (updated.count === 0) {
-    return {
-      success: false,
-      message: "❌ لم يتم العثور على دور مُستدعى",
-    };
-  }
 
   console.log(`▶️ بدأت الخدمة للدور #${queueId}`);
 
@@ -46,12 +57,28 @@ async function completeStationService(
   stationId: number,
   notes?: string
 ) {
-  // 1. إنهاء الخدمة في المحطة الحالية
-  await prisma.queueHistory.updateMany({
+  // 1. الحصول على آخر سجل IN_PROGRESS أو CALLED فقط
+  const lastActiveRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queueId,
       stationId: stationId,
-      status: QueueStatus.IN_PROGRESS,
+      status: {
+        in: [QueueStatus.IN_PROGRESS, QueueStatus.CALLED],
+      },
+    },
+    orderBy: {
+      createdAt: "desc", // الأحدث أولاً
+    },
+  });
+
+  if (!lastActiveRecord) {
+    throw new Error("❌ لم يتم العثور على سجل نشط للدور في هذه المحطة");
+  }
+
+  // 2. تحديث السجل المحدد فقط إلى COMPLETED
+  await prisma.queueHistory.update({
+    where: {
+      id: lastActiveRecord.id,
     },
     data: {
       status: QueueStatus.COMPLETED,
@@ -60,7 +87,7 @@ async function completeStationService(
     },
   });
 
-  // 2. الحصول على المحطة الحالية
+  // 3. الحصول على المحطة الحالية
   const currentStation = await prisma.station.findUnique({
     where: { id: stationId },
   });
@@ -69,7 +96,7 @@ async function completeStationService(
     throw new Error("❌ المحطة غير موجودة");
   }
 
-  // 3. البحث عن المحطة التالية
+  // 4. البحث عن المحطة التالية
   const nextStation = await prisma.station.findFirst({
     where: {
       order: { gt: currentStation.order },

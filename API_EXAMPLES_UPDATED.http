@@ -1,0 +1,415 @@
+### ==============================================
+### نظام إدارة الأدوار - الطريقة الجديدة
+### الاستقبال كنقطة البداية
+### ==============================================
+
+@baseUrl = http://localhost:3001
+@contentType = application/json
+
+### ==============================================
+### 1. التحقق من تشغيل الخادم
+### ==============================================
+GET {{baseUrl}}
+
+### ==============================================
+### 2. الطريقة الجديدة: الاستقبال كنقطة البداية ✨
+### ==============================================
+
+### ✅ المريض الأول - إنشاء مريض ودور جديد تلقائياً
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "أحمد",
+  "maleLastName": "محمد",
+  "maleFatherName": "علي",
+  "maleBirthDate": "1995-01-15",
+  "maleNationalId": "1234567890",
+  "maleAge": 29,
+  "femaleName": "فاطمة",
+  "femaleLastName": "حسن",
+  "femaleFatherName": "خالد",
+  "femaleBirthDate": "1997-03-20",
+  "femaleNationalId": "0987654321",
+  "femaleAge": 27,
+  "phoneNumber": "0501234567",
+  "notes": "فحص ما قبل الزواج",
+  "priority": 0
+}
+
+### ✅ المريض الثاني - إنشاء مريض ودور جديد تلقائياً
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "خالد",
+  "maleLastName": "أحمد",
+  "maleFatherName": "سالم",
+  "maleBirthDate": "1992-08-20",
+  "maleNationalId": "9876543210",
+  "maleAge": 32,
+  "femaleName": "نورة",
+  "femaleLastName": "عبدالله",
+  "femaleFatherName": "محمد",
+  "femaleBirthDate": "1994-12-10",
+  "femaleNationalId": "5544332211",
+  "femaleAge": 30,
+  "phoneNumber": "0559876543"
+}
+
+### ✅ المريض الثالث - مع أولوية عالية
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "عبدالله",
+  "maleLastName": "حسن",
+  "maleFatherName": "أحمد",
+  "maleBirthDate": "1990-03-15",
+  "maleNationalId": "1122334455",
+  "maleAge": 34,
+  "femaleName": "مريم",
+  "femaleLastName": "خالد",
+  "femaleFatherName": "سعيد",
+  "femaleBirthDate": "1993-07-25",
+  "femaleNationalId": "6677889900",
+  "femaleAge": 31,
+  "phoneNumber": "0551122334",
+  "priority": 1,
+  "notes": "حالة طارئة - أولوية عالية"
+}
+
+### ==============================================
+### 3. الحصول على بيانات الاستقبال
+### ==============================================
+
+### الحصول على بيانات الاستقبال للدور #1
+GET {{baseUrl}}/api/reception/1
+
+### الحصول على بيانات الاستقبال للدور #2
+GET {{baseUrl}}/api/reception/2
+
+### ==============================================
+### 4. تحديث بيانات الاستقبال
+### ==============================================
+
+### تحديث بيانات الاستقبال
+PUT {{baseUrl}}/api/reception/1
+Content-Type: {{contentType}}
+
+{
+  "maleAge": 30,
+  "notes": "تم تحديث العمر"
+}
+
+### ==============================================
+### 5. سير العمل الكامل - المريض الأول
+### ==============================================
+
+### الخطوة 1: إنشاء مريض ودور في الاستقبال
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "علي",
+  "maleLastName": "حسن",
+  "maleFatherName": "محمد",
+  "maleBirthDate": "1994-05-10",
+  "maleNationalId": "1010101010",
+  "maleAge": 30,
+  "femaleName": "سارة",
+  "femaleLastName": "أحمد",
+  "femaleFatherName": "عبدالله",
+  "femaleBirthDate": "1996-08-20",
+  "femaleNationalId": "2020202020",
+  "femaleAge": 28,
+  "phoneNumber": "0557788990"
+}
+
+### الخطوة 2: عرض قائمة الأدوار النشطة
+GET {{baseUrl}}/api/queue/active
+
+### الخطوة 3: الانتقال للمحطة التالية (المختبر)
+POST {{baseUrl}}/api/stations/1/complete-service
+Content-Type: {{contentType}}
+
+{
+  "queueId": 1,
+  "notes": "تم الانتهاء من الاستقبال"
+}
+
+### الخطوة 4: استدعاء في المختبر
+POST {{baseUrl}}/api/stations/2/call-next
+Content-Type: {{contentType}}
+
+{
+  "calledBy": "فني المختبر"
+}
+
+### الخطوة 5: حفظ بيانات المختبر (يستدعي التالي تلقائياً)
+POST {{baseUrl}}/api/lab
+Content-Type: {{contentType}}
+
+{
+  "queueId": 1,
+  "patientId": 1,
+  "doctorName": "د. أحمد علي",
+  "isMaleHealthy": "HEALTHY",
+  "isFemaleHealthy": "HEALTHY",
+  "maleNotes": "الفحص طبيعي",
+  "femaleNotes": "الفحص طبيعي"
+}
+
+### الخطوة 6: الانتقال للطبيب
+POST {{baseUrl}}/api/stations/2/complete-service
+Content-Type: {{contentType}}
+
+{
+  "queueId": 1,
+  "notes": "تم الانتهاء من المختبر"
+}
+
+### الخطوة 7: استدعاء عند الطبيب
+POST {{baseUrl}}/api/stations/3/call-next
+Content-Type: {{contentType}}
+
+{
+  "calledBy": "الطبيب"
+}
+
+### الخطوة 8: حفظ بيانات الطبيب (يستدعي التالي تلقائياً)
+POST {{baseUrl}}/api/doctor
+Content-Type: {{contentType}}
+
+{
+  "queueId": 1,
+  "patientId": 1,
+  "maleBloodType": "O+",
+  "femaleBloodType": "A+",
+  "maleHIVstatus": "NEGATIVE",
+  "femaleHIVstatus": "NEGATIVE",
+  "maleHBSstatus": "NEGATIVE",
+  "femaleHBSstatus": "NEGATIVE",
+  "maleHBCstatus": "NEGATIVE",
+  "femaleHBCstatus": "NEGATIVE",
+  "maleNotes": "الفحص الطبي سليم",
+  "femaleNotes": "الفحص الطبي سليم"
+}
+
+### الخطوة 9: إنهاء الدور بالكامل
+POST {{baseUrl}}/api/queue/1/complete
+
+### ==============================================
+### 6. حالة خاصة - مريض غير سليم
+### ==============================================
+
+### إنشاء مريض جديد
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "سعيد",
+  "maleLastName": "عبدالله",
+  "maleFatherName": "أحمد",
+  "maleBirthDate": "1988-11-05",
+  "maleNationalId": "3030303030",
+  "maleAge": 36,
+  "femaleName": "ليلى",
+  "femaleLastName": "محمد",
+  "femaleFatherName": "حسن",
+  "femaleBirthDate": "1990-02-14",
+  "femaleNationalId": "4040404040",
+  "femaleAge": 34,
+  "phoneNumber": "0556677889"
+}
+
+### في المختبر - اكتشاف مشكلة صحية
+POST {{baseUrl}}/api/lab
+Content-Type: {{contentType}}
+
+{
+  "queueId": 2,
+  "patientId": 2,
+  "doctorName": "د. سارة محمود",
+  "isMaleHealthy": "UNHEALTHY",
+  "isFemaleHealthy": "HEALTHY",
+  "maleNotes": "يحتاج فحوصات إضافية",
+  "femaleNotes": "الفحص طبيعي",
+  "notes": "تم تحويل الزوج للفحوصات الإضافية"
+}
+
+### عند الطبيب - تأكيد المشكلة
+POST {{baseUrl}}/api/doctor
+Content-Type: {{contentType}}
+
+{
+  "queueId": 2,
+  "patientId": 2,
+  "maleBloodType": "B-",
+  "femaleBloodType": "AB+",
+  "maleHIVstatus": "POSITIVE",
+  "femaleHIVstatus": "NEGATIVE",
+  "maleHBSstatus": "POSITIVE",
+  "femaleHBSstatus": "NEGATIVE",
+  "maleHBCstatus": "NEGATIVE",
+  "femaleHBCstatus": "NEGATIVE",
+  "maleNotes": "تم اكتشاف HIV و HBS إيجابي - تم التحويل للعلاج",
+  "femaleNotes": "الزوجة سليمة",
+  "notes": "تم إيقاف إجراءات الزواج وتحويل الزوج للعلاج"
+}
+
+### ==============================================
+### 7. المحطات والقوائم
+### ==============================================
+
+### عرض جميع المحطات
+GET {{baseUrl}}/api/stations
+
+### قائمة الانتظار في الاستقبال (محطة 1)
+GET {{baseUrl}}/api/stations/1/waiting-list
+
+### قائمة الانتظار في المختبر (محطة 2)
+GET {{baseUrl}}/api/stations/2/waiting-list
+
+### قائمة الانتظار عند الطبيب (محطة 3)
+GET {{baseUrl}}/api/stations/3/waiting-list
+
+### المريض الحالي في المحطة 1
+GET {{baseUrl}}/api/stations/1/current
+
+### ==============================================
+### 8. إدارة المرضى
+### ==============================================
+
+### البحث عن مريض برقم الهاتف
+GET {{baseUrl}}/api/patients/search?phone=0501234567
+
+### البحث عن مريض برقم الهوية
+GET {{baseUrl}}/api/patients/search?nationalId=1234567890
+
+### الحصول على بيانات مريض معين
+GET {{baseUrl}}/api/patients/1
+
+### تاريخ زيارات المريض
+GET {{baseUrl}}/api/patients/1/history
+
+### ==============================================
+### 9. الإحصائيات
+### ==============================================
+
+### إحصائيات اليوم
+GET {{baseUrl}}/api/stats/today
+
+### إحصائيات المحطات
+GET {{baseUrl}}/api/stats/stations
+
+### إحصائيات مخصصة
+GET {{baseUrl}}/api/stats/custom?startDate=2025-10-01&endDate=2025-10-12
+
+### ==============================================
+### 10. الشاشات
+### ==============================================
+
+### بيانات الشاشة العامة
+GET {{baseUrl}}/api/display/data
+
+### ==============================================
+### 11. بيانات المختبر والطبيب
+### ==============================================
+
+### الحصول على بيانات المختبر
+GET {{baseUrl}}/api/lab/1
+
+### تحديث بيانات المختبر
+PUT {{baseUrl}}/api/lab/1
+Content-Type: {{contentType}}
+
+{
+  "isMaleHealthy": "UNHEALTHY",
+  "maleNotes": "تم اكتشاف مشكلة"
+}
+
+### الحصول على بيانات الطبيب
+GET {{baseUrl}}/api/doctor/1
+
+### تحديث بيانات الطبيب
+PUT {{baseUrl}}/api/doctor/1
+Content-Type: {{contentType}}
+
+{
+  "maleBloodType": "O-",
+  "maleNotes": "تم تصحيح فصيلة الدم"
+}
+
+### ==============================================
+### 12. سيناريو كامل - 3 مرضى متتاليين
+### ==============================================
+
+### المريض 1
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "محمد",
+  "maleLastName": "أحمد",
+  "maleFatherName": "علي",
+  "maleBirthDate": "1995-01-01",
+  "maleNationalId": "1111111111",
+  "maleAge": 29,
+  "femaleName": "عائشة",
+  "femaleLastName": "سالم",
+  "femaleFatherName": "خالد",
+  "femaleBirthDate": "1997-02-02",
+  "femaleNationalId": "2222222222",
+  "femaleAge": 27,
+  "phoneNumber": "0551111111"
+}
+
+### المريض 2
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "يوسف",
+  "maleLastName": "حسن",
+  "maleFatherName": "أحمد",
+  "maleBirthDate": "1993-03-03",
+  "maleNationalId": "3333333333",
+  "maleAge": 31,
+  "femaleName": "زينب",
+  "femaleLastName": "محمد",
+  "femaleFatherName": "سعيد",
+  "femaleBirthDate": "1995-04-04",
+  "femaleNationalId": "4444444444",
+  "femaleAge": 29,
+  "phoneNumber": "0553333333"
+}
+
+### المريض 3
+POST {{baseUrl}}/api/reception
+Content-Type: {{contentType}}
+
+{
+  "maleName": "عمر",
+  "maleLastName": "عبدالله",
+  "maleFatherName": "محمد",
+  "maleBirthDate": "1991-05-05",
+  "maleNationalId": "5555555555",
+  "maleAge": 33,
+  "femaleName": "فاطمة",
+  "femaleLastName": "حسن",
+  "femaleFatherName": "علي",
+  "femaleBirthDate": "1993-06-06",
+  "femaleNationalId": "6666666666",
+  "femaleAge": 31,
+  "phoneNumber": "0555555555"
+}
+
+### ==============================================
+### ملاحظات مهمة:
+### 1. الاستقبال الآن هو نقطة البداية
+### 2. يتم إنشاء المريض والدور تلقائياً
+### 3. في المختبر والطبيب: حفظ البيانات يستدعي التالي تلقائياً
+### 4. لا حاجة لـ POST /api/queue/create
+### ==============================================
+

@@ -92,12 +92,29 @@ async function callNextPatient(stationId: number, calledBy?: string) {
     };
   }
 
-  // 2. تحديث حالة QueueHistory إلى CALLED
-  await prisma.queueHistory.updateMany({
+  // 2. الحصول على آخر سجل WAITING فقط
+  const lastWaitingRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: nextQueue.id,
       stationId: stationId,
       status: QueueStatus.WAITING,
+    },
+    orderBy: {
+      createdAt: "desc", // الأحدث أولاً
+    },
+  });
+
+  if (!lastWaitingRecord) {
+    return {
+      success: false,
+      message: "⚠️ لم يتم العثور على سجل انتظار",
+    };
+  }
+
+  // 3. تحديث السجل المحدد فقط إلى CALLED
+  await prisma.queueHistory.update({
+    where: {
+      id: lastWaitingRecord.id,
     },
     data: {
       status: QueueStatus.CALLED,
@@ -106,7 +123,7 @@ async function callNextPatient(stationId: number, calledBy?: string) {
     },
   });
 
-  // 3. الحصول على المعلومات المحدثة
+  // 4. الحصول على المعلومات المحدثة
   const updatedQueue = await prisma.queue.findUnique({
     where: { id: nextQueue.id },
     include: {
@@ -150,11 +167,29 @@ async function callSpecificQueue(
     };
   }
 
-  await prisma.queueHistory.updateMany({
+  // الحصول على آخر سجل WAITING فقط
+  const lastWaitingRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queue.id,
       stationId: stationId,
       status: QueueStatus.WAITING,
+    },
+    orderBy: {
+      createdAt: "desc", // الأحدث أولاً
+    },
+  });
+
+  if (!lastWaitingRecord) {
+    return {
+      success: false,
+      message: "❌ لم يتم العثور على سجل انتظار لهذا الدور",
+    };
+  }
+
+  // تحديث السجل المحدد فقط إلى CALLED
+  await prisma.queueHistory.update({
+    where: {
+      id: lastWaitingRecord.id,
     },
     data: {
       status: QueueStatus.CALLED,

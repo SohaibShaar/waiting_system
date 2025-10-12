@@ -186,6 +186,7 @@ async function getAllActiveQueues() {
     include: {
       patient: true,
       currentStation: true,
+      ReceptionData: true, // Include reception data for patient info
     },
     orderBy: { queueNumber: "asc" },
   });
@@ -306,18 +307,35 @@ async function cancelQueue(queueId: number, reason?: string) {
  * تخطي مريض (يعود لآخر القائمة)
  */
 async function skipPatient(queueId: number, stationId: number) {
-  await prisma.queueHistory.updateMany({
+  // الحصول على آخر سجل CALLED أو IN_PROGRESS فقط
+  const lastActiveRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queueId,
       stationId: stationId,
-      status: QueueStatus.CALLED,
+      status: {
+        in: [QueueStatus.CALLED, QueueStatus.IN_PROGRESS],
+      },
+    },
+    orderBy: {
+      createdAt: "desc", // الأحدث أولاً
+    },
+  });
+
+  if (!lastActiveRecord) {
+    throw new Error("❌ لم يتم العثور على سجل نشط للتخطي");
+  }
+
+  // تحديث السجل المحدد فقط إلى SKIPPED
+  await prisma.queueHistory.update({
+    where: {
+      id: lastActiveRecord.id,
     },
     data: {
       status: QueueStatus.SKIPPED,
     },
   });
 
-  // إعادة إلى حالة الانتظار
+  // إعادة إلى حالة الانتظار بسجل جديد
   await prisma.queueHistory.create({
     data: {
       queueId: queueId,

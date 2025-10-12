@@ -10,6 +10,10 @@ import queueRoutes from "./routes/queue.routes";
 import stationRoutes from "./routes/station.routes";
 import statsRoutes from "./routes/stats.routes";
 import screenRouter from "./routes/screen.routes";
+import receptionRoutes from "./routes/reception.routes";
+import labRoutes from "./routes/lab.routes";
+import doctorRoutes from "./routes/doctor.routes";
+import accountingRoutes from "./routes/accounting.routes";
 
 dotenv.config();
 
@@ -32,6 +36,10 @@ app.use("/api/queue", queueRoutes);
 app.use("/api/stations", stationRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/display", screenRouter);
+app.use("/api/reception", receptionRoutes);
+app.use("/api/lab", labRoutes);
+app.use("/api/doctor", doctorRoutes);
+app.use("/api/accounting", accountingRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {
@@ -43,6 +51,11 @@ app.get("/", (req, res) => {
       queue: "/api/queue",
       stations: "/api/stations",
       stats: "/api/stats",
+      display: "/api/display",
+      reception: "/api/reception",
+      lab: "/api/lab",
+      doctor: "/api/doctor",
+      accounting: "/api/accounting",
     },
   });
 });
@@ -70,8 +83,18 @@ io.on("connection", (socket: any) => {
 
 // وظائف إرسال الأحداث
 export const emitQueueUpdate = (data: any) => {
-  io.to("display-screen").emit("queue-updated", data);
-  console.log("📡 Emitted queue-updated to display-screen");
+  io.emit("queue-updated", data); // Broadcast to all clients
+  console.log("📡 Emitted queue-updated to all clients");
+};
+
+export const emitNewQueue = (data: any) => {
+  io.emit("new-queue", data); // Broadcast to all clients
+  console.log("📡 Emitted new-queue to all clients:", data);
+};
+
+export const emitQueueCompleted = (data: any) => {
+  io.emit("queue-completed", data); // Broadcast to all clients
+  console.log("📡 Emitted queue-completed to all clients");
 };
 
 export const emitStationUpdate = (stationId: number, data: any) => {
@@ -83,18 +106,24 @@ export const emitStationUpdate = (stationId: number, data: any) => {
 };
 
 export const emitPatientCalled = (data: any) => {
+  // إرسال فقط لشاشة العرض لتجنب التكرار
   io.to("display-screen").emit("patient-called", data);
-  console.log("📡 Emitted patient-called to display-screen");
+  console.log("📡 Emitted patient-called to display-screen:", {
+    queueNumber: data.queueNumber,
+    displayNumber: data.displayNumber,
+    stationId: data.stationId,
+  });
 };
 
 export const emitScreenDataUpdate = () => {
   io.to("display-screen").emit("screen-data-updated");
+  io.emit("queue-updated", {}); // Trigger update for sidebars
   console.log("📡 Emitted screen-data-updated to display-screen");
 };
 // Export io for use in other modules
 export { io };
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3003;
 
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);

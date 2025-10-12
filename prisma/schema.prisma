@@ -35,6 +35,16 @@ enum OverallQueueStatus {
   CANCELLED // ملغي
 }
 
+enum Status {
+  HEALTHY // صحي
+  UNHEALTHY // غير صحي
+}
+
+enum DiseasesStatus {
+  POSITIVE // مصاب
+  NEGATIVE // غير مصاب
+}
+
 // ============================================
 // Models - نماذج قاعدة البيانات
 // ============================================
@@ -51,6 +61,10 @@ model Patient {
   // العلاقات
   queues          Queue[] // الأدوار الحالية
   completedVisits CompletedVisit[] // الزيارات المكتملة
+  ReceptionData   ReceptionData[]
+  AccountingData  AccountingData[]
+  LabData         LabData[]
+  DoctorData      DoctorData[]
 
   @@index([phoneNumber])
   @@index([nationalId])
@@ -89,9 +103,13 @@ model Queue {
   completedAt      DateTime? // وقت الانتهاء الكلي
 
   // العلاقات
-  patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  currentStation Station        @relation(fields: [currentStationId], references: [id])
+  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  currentStation Station         @relation(fields: [currentStationId], references: [id])
   history        QueueHistory[] // سجل التحركات
+  ReceptionData  ReceptionData?
+  AccountingData AccountingData?
+  LabData        LabData?
+  DoctorData     DoctorData?
 
   @@unique([queueNumber, createdAt])
   @@index([patientId])
@@ -155,4 +173,107 @@ model SystemSettings {
   updatedAt   DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+// 7. بيانات الاستقبال
+model ReceptionData {
+  id               Int      @id @default(autoincrement())
+  patientId        Int
+  queueId          Int      @unique // كل دور له بيانات استقبال واحدة
+  maleName         String   @db.VarChar(255)
+  maleLastName     String   @db.VarChar(255)
+  maleFatherName   String   @db.VarChar(255)
+  maleBirthDate    DateTime @db.DateTime
+  maleNationalId   String   @unique @db.VarChar(255) // لا يسمح بتكرار الرقم الوطني للزوج
+  maleAge          Int      @default(0)
+  femaleName       String   @db.VarChar(255)
+  femaleLastName   String   @db.VarChar(255)
+  femaleFatherName String   @db.VarChar(255)
+  femaleBirthDate  DateTime @db.DateTime
+  femaleNationalId String   @unique @db.VarChar(255) // لا يسمح بتكرار الرقم الوطني للزوجة
+  femaleAge        Int      @default(0)
+  phoneNumber      String?  @db.VarChar(20) // رقم الهاتف
+  notes            String?  @db.Text // ملاحظات
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // العلاقات
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue   Queue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([maleNationalId])
+  @@index([femaleNationalId])
+  @@map("reception_data")
+}
+
+// 8. بيانات المحاسبة
+model AccountingData {
+  id          Int      @id @default(autoincrement())
+  patientId   Int
+  queueId     Int      @unique
+  totalAmount Float?   @default(0)
+  isPaid      Boolean  @default(false)
+  notes       String?  @db.Text // ملاحظات
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // العلاقات
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue   Queue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@map("accounting_data")
+}
+
+// 9. بيانات الطبيب 
+model LabData {
+  id              Int      @id @default(autoincrement())
+  patientId       Int
+  queueId         Int      @unique
+  doctorName      String?  @db.VarChar(255) // اسم الطبيب
+  isMaleHealthy   Status   @default(HEALTHY)
+  isFemaleHealthy Status   @default(HEALTHY)
+  maleNotes       String?  @db.Text // ملاحظات الذكر
+  femaleNotes     String?  @db.Text // ملاحظات الأنثى
+  notes           String?  @db.Text // ملاحظات عامة
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // العلاقات
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue   Queue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([doctorName])
+  @@map("lab_data")
+}
+
+model DoctorData {
+  id              Int            @id @default(autoincrement())
+  patientId       Int
+  queueId         Int            @unique
+  maleBloodType   String?        @db.VarChar(255) // نوع الدم الذكر
+  femaleBloodType String?        @db.VarChar(255) // نوع الدم الأنثى
+  maleHIVstatus   DiseasesStatus @default(NEGATIVE)
+  femaleHIVstatus DiseasesStatus @default(NEGATIVE)
+  maleHBSstatus   DiseasesStatus @default(NEGATIVE)
+  femaleHBSstatus DiseasesStatus @default(NEGATIVE)
+  maleHBCstatus   DiseasesStatus @default(NEGATIVE)
+  femaleHBCstatus DiseasesStatus @default(NEGATIVE)
+  maleNotes       String?        @db.Text // ملاحظات الذكر
+  femaleNotes     String?        @db.Text // ملاحظات الأنثى
+  notes           String?        @db.Text // ملاحظات عامة
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  // العلاقات
+  patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue           Queue          @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@map("doctor_data")
 }

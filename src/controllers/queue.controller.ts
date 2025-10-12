@@ -90,6 +90,7 @@ export async function getQueueById(req: Request, res: Response) {
       include: {
         patient: true,
         currentStation: true,
+        ReceptionData: true,
         history: {
           include: {
             station: true,
