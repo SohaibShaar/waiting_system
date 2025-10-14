@@ -45,6 +45,14 @@ enum DiseasesStatus {
   NEGATIVE // غير مصاب
 }
 
+enum SpouseStatus {
+  NORMAL // عادي - الزوجان موجودان
+  LEGAL_INVITATION // دعوة شرعية - شخص واحد فقط
+  NOT_EXIST // لا يوجد - عند دعوة شرعية للطرف الآخر
+  OUT_OF_COUNTRY // خارج القطر
+  OUT_OF_PROVINCE // خارج المحافظة
+}
+
 // ============================================
 // Models - نماذج قاعدة البيانات
 // ============================================
@@ -177,25 +185,37 @@ model SystemSettings {
 
 // 7. بيانات الاستقبال
 model ReceptionData {
-  id               Int      @id @default(autoincrement())
-  patientId        Int
-  queueId          Int      @unique // كل دور له بيانات استقبال واحدة
-  maleName         String   @db.VarChar(255)
-  maleLastName     String   @db.VarChar(255)
-  maleFatherName   String   @db.VarChar(255)
-  maleBirthDate    DateTime @db.DateTime
-  maleNationalId   String   @unique @db.VarChar(255) // لا يسمح بتكرار الرقم الوطني للزوج
-  maleAge          Int      @default(0)
-  femaleName       String   @db.VarChar(255)
-  femaleLastName   String   @db.VarChar(255)
-  femaleFatherName String   @db.VarChar(255)
-  femaleBirthDate  DateTime @db.DateTime
-  femaleNationalId String   @unique @db.VarChar(255) // لا يسمح بتكرار الرقم الوطني للزوجة
-  femaleAge        Int      @default(0)
-  phoneNumber      String?  @db.VarChar(20) // رقم الهاتف
-  notes            String?  @db.Text // ملاحظات
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                 Int          @id @default(autoincrement())
+  patientId          Int
+  queueId            Int          @unique // كل دور له بيانات استقبال واحدة
+  // حالة الزوج والزوجة
+  maleStatus         SpouseStatus @default(NORMAL)
+  femaleStatus       SpouseStatus @default(NORMAL)
+  // بيانات الزوج (اختيارية حسب الحالة)
+  maleName           String?      @db.VarChar(255)
+  maleLastName       String?      @db.VarChar(255)
+  maleFatherName     String?      @db.VarChar(255)
+  maleBirthDate      DateTime?    @db.DateTime
+  maleNationalId     String?      @db.VarChar(255)
+  maleAge            Int?
+  maleBirthPlace     String?      @db.VarChar(255) // مكان الولادة
+  maleRegistration   String?      @db.VarChar(255) // القيد
+  maleCountry        String?      @db.VarChar(255) // البلد
+  // بيانات الزوجة (اختيارية حسب الحالة)
+  femaleName         String?      @db.VarChar(255)
+  femaleLastName     String?      @db.VarChar(255)
+  femaleFatherName   String?      @db.VarChar(255)
+  femaleBirthDate    DateTime?    @db.DateTime
+  femaleNationalId   String?      @db.VarChar(255)
+  femaleAge          Int?
+  femaleBirthPlace   String?      @db.VarChar(255) // مكان الولادة
+  femaleRegistration String?      @db.VarChar(255) // القيد
+  femaleCountry      String?      @db.VarChar(255) // البلد
+  // بيانات عامة
+  phoneNumber        String?      @db.VarChar(20) // رقم الهاتف
+  notes              String?      @db.Text // ملاحظات
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   // العلاقات
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)

@@ -19,6 +19,8 @@ interface CurrentPatient {
     femaleName: string;
     femaleLastName: string;
     phoneNumber?: string;
+    maleStatus: string;
+    femaleStatus: string;
   };
 }
 
@@ -404,9 +406,21 @@ const AccountingPage = () => {
                     <div
                       className='text-lg font-bold'
                       style={{ color: "var(--primary)" }}>
-                      {currentPatient.ReceptionData
-                        ? `${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`
-                        : currentPatient.patientName}
+                      {currentPatient.ReceptionData &&
+                      currentPatient.ReceptionData.maleName != null ? (
+                        `${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`
+                      ) : currentPatient.ReceptionData?.maleStatus ===
+                        "NOT_EXIST" ? (
+                        <span className='text-red-500'>لا يوجد زوج</span>
+                      ) : currentPatient.ReceptionData?.maleStatus ===
+                        "OUT_OF_COUNTRY" ? (
+                        <span className='text-red-500'>خارج القطر</span>
+                      ) : currentPatient.ReceptionData?.maleStatus ===
+                        "OUT_OF_PROVINCE" ? (
+                        <span className='text-red-500'>خارج المحافظة</span>
+                      ) : (
+                        "-"
+                      )}
                     </div>
                   </div>
 
@@ -419,9 +433,21 @@ const AccountingPage = () => {
                     <div
                       className='text-lg font-bold'
                       style={{ color: "var(--primary)" }}>
-                      {currentPatient.ReceptionData
-                        ? `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
-                        : "-"}
+                      {currentPatient.ReceptionData &&
+                      currentPatient.ReceptionData.femaleName != null ? (
+                        `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
+                      ) : currentPatient.ReceptionData?.femaleStatus ===
+                        "NOT_EXIST" ? (
+                        <span className='text-red-500'>لا يوجد زوجة</span>
+                      ) : currentPatient.ReceptionData?.femaleStatus ===
+                        "OUT_OF_COUNTRY" ? (
+                        <span className='text-red-500'>خارج القطر</span>
+                      ) : currentPatient.ReceptionData?.femaleStatus ===
+                        "OUT_OF_PROVINCE" ? (
+                        <span className='text-red-500'>خارج المحافظة</span>
+                      ) : (
+                        "-"
+                      )}
                     </div>
                   </div>
                 </div>

@@ -9,43 +9,160 @@ const API_URL = "http://localhost:3003/api";
 interface ReceptionData {
   id: number;
   queueId: number;
-  maleName: string;
-  maleLastName: string;
-  maleFatherName: string;
-  maleBirthDate: string;
-  maleNationalId: string;
-  maleAge: number;
-  femaleName: string;
-  femaleLastName: string;
-  femaleFatherName: string;
-  femaleBirthDate: string;
-  femaleNationalId: string;
-  femaleAge: number;
+  patientId: number;
+  maleStatus: string;
+  femaleStatus: string;
+  maleName?: string;
+  maleLastName?: string;
+  maleFatherName?: string;
+  maleBirthDate?: string;
+  maleNationalId?: string;
+  maleAge?: number;
+  maleBirthPlace?: string;
+  maleRegistration?: string;
+  maleCountry?: string;
+  femaleName?: string;
+  femaleLastName?: string;
+  femaleFatherName?: string;
+  femaleBirthDate?: string;
+  femaleNationalId?: string;
+  femaleAge?: number;
+  femaleBirthPlace?: string;
+  femaleRegistration?: string;
+  femaleCountry?: string;
   phoneNumber?: string;
   notes?: string;
   createdAt: string;
   queue: {
     queueNumber: number;
     patient: {
+      id: number;
       name: string;
     };
   };
 }
 
 const ReceptionPage = () => {
+  // قائمة المدن السورية
+  const syrianCities = [
+    "دمشق",
+    "حلب",
+    "حمص",
+    "حماة",
+    "حماه",
+    "اللاذقية",
+    "طرطوس",
+    "دير الزور",
+    "ديرالزور",
+    "الرقة",
+    "إدلب",
+    "ادلب",
+    "السويداء",
+    "درعا",
+    "القنيطرة",
+    "القنيطره",
+    "الحسكة",
+    "الحسكه",
+    "القامشلي",
+    "منبج",
+    "جبلة",
+    "جبله",
+    "بانياس",
+    "صافيتا",
+    "تدمر",
+    "سلمية",
+    "سلميه",
+    "السلمية",
+    "السلميه",
+    "الباب",
+    "جرابلس",
+    "عفرين",
+    "معرة النعمان",
+    "معره النعمان",
+    "معرةالنعمان",
+    "خان شيخون",
+    "صلخد",
+    "شهبا",
+    "ازرع",
+    "بصرى الشام",
+    "نوى",
+    "الصنمين",
+    "جاسم",
+    "الشيخ مسكين",
+    "تل",
+    "قطنا",
+    "دوما",
+    "داريا",
+    "معضمية الشام",
+    "جرمانا",
+    "صيدنايا",
+    "النبك",
+    "يبرود",
+    "القريتين",
+    "الرستن",
+    "تلبيسة",
+    "تلبيسه",
+    "القصير",
+    "جبلة",
+    "الحفة",
+    "الحفه",
+    "كسب",
+    "مصياف",
+    "السقيلبية",
+    "محردة",
+    "محرده",
+    "سرمدا",
+    "سراقب",
+    "أريحا",
+    "اريحا",
+    "طفس",
+    "الميادين",
+    "البوكمال",
+    "تل أبيض",
+    "رأس العين",
+    "المالكية",
+    "عامودا",
+    "الدرباسية",
+    "الثورة",
+    "الثوره",
+    "كفرنبل",
+    "كفر تخاريم",
+    "الدانا",
+  ];
+
+  // دالة للتحقق من المدينة السورية
+  const isSyrianCity = (cityName: string): boolean => {
+    if (!cityName || cityName.trim() === "") return false;
+
+    const normalizedInput = cityName.trim().toLowerCase();
+    return syrianCities.some(
+      (city) =>
+        city.toLowerCase().includes(normalizedInput) ||
+        normalizedInput.includes(city.toLowerCase())
+    );
+  };
+
   const [formData, setFormData] = useState({
+    maleStatus: "NORMAL",
+    femaleStatus: "NORMAL",
     maleName: "",
     maleLastName: "",
     maleFatherName: "",
     maleBirthDate: "",
     maleNationalId: "",
     maleAge: "",
+    maleBirthPlace: "",
+    maleRegistration: "",
+    maleCountry: "",
     femaleName: "",
     femaleLastName: "",
     femaleFatherName: "",
     femaleBirthDate: "",
     femaleNationalId: "",
     femaleAge: "",
+    femaleBirthPlace: "",
+    femaleRegistration: "",
+    femaleCountry: "",
     phoneNumber: "",
     notes: "",
     priority: "0",
@@ -54,6 +171,9 @@ const ReceptionPage = () => {
   const [todayPatients, setTodayPatients] = useState<ReceptionData[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingPatient, setEditingPatient] = useState<ReceptionData | null>(
+    null
+  );
 
   // WebSocket for real-time updates
   const { updateTrigger } = useQueueUpdates();
@@ -155,8 +275,111 @@ const ReceptionPage = () => {
         [name]: value,
         femaleAge: age.toString(),
       }));
+    } else if (name === "maleStatus") {
+      // عند اختيار دعوة شرعية للزوج، اجعل الزوجة "لا يوجد" تلقائياً
+      if (value === "LEGAL_INVITATION") {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          femaleStatus: "NOT_EXIST",
+          // مسح بيانات الزوجة
+          femaleName: "",
+          femaleLastName: "",
+          femaleFatherName: "",
+          femaleBirthDate: "",
+          femaleNationalId: "",
+          femaleAge: "",
+          femaleBirthPlace: "",
+          femaleRegistration: "",
+          femaleCountry: "",
+        }));
+      } else if (
+        value === "NOT_EXIST" ||
+        value === "OUT_OF_COUNTRY" ||
+        value === "OUT_OF_PROVINCE"
+      ) {
+        // مسح بيانات الزوج عند اختيار حالة لا يحتاج بيانات
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          maleName: "",
+          maleLastName: "",
+          maleFatherName: "",
+          maleBirthDate: "",
+          maleNationalId: "",
+          maleAge: "",
+          maleBirthPlace: "",
+          maleRegistration: "",
+          maleCountry: "",
+        }));
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      }
+    } else if (name === "femaleStatus") {
+      // عند اختيار دعوة شرعية للزوجة، اجعل الزوج "لا يوجد" تلقائياً
+      if (value === "LEGAL_INVITATION") {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          maleStatus: "NOT_EXIST",
+          // مسح بيانات الزوج
+          maleName: "",
+          maleLastName: "",
+          maleFatherName: "",
+          maleBirthDate: "",
+          maleNationalId: "",
+          maleAge: "",
+          maleBirthPlace: "",
+          maleRegistration: "",
+          maleCountry: "",
+        }));
+      } else if (
+        value === "NOT_EXIST" ||
+        value === "OUT_OF_COUNTRY" ||
+        value === "OUT_OF_PROVINCE"
+      ) {
+        // مسح بيانات الزوجة عند اختيار حالة لا يحتاج بيانات
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          femaleName: "",
+          femaleLastName: "",
+          femaleFatherName: "",
+          femaleBirthDate: "",
+          femaleNationalId: "",
+          femaleAge: "",
+          femaleBirthPlace: "",
+          femaleRegistration: "",
+          femaleCountry: "",
+        }));
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // دالة للتحقق من مكان الولادة بعد الانتهاء من الكتابة
+  const handleBirthPlaceBlur = (
+    e: React.FocusEvent<HTMLInputElement>,
+    fieldName: "maleBirthPlace" | "femaleBirthPlace"
+  ) => {
+    const value = e.target.value;
+
+    // التحقق من المدينة السورية بعد الانتهاء من الكتابة
+    if (value && isSyrianCity(value)) {
+      if (fieldName === "maleBirthPlace") {
+        setFormData((prev) => ({
+          ...prev,
+          maleCountry: "سوريا",
+        }));
+      } else if (fieldName === "femaleBirthPlace") {
+        setFormData((prev) => ({
+          ...prev,
+          femaleCountry: "سوريا",
+        }));
+      }
     }
   };
 
@@ -167,10 +390,14 @@ const ReceptionPage = () => {
     try {
       const dataToSend = {
         ...formData,
-        maleBirthDate: new Date(formData.maleBirthDate).toISOString(),
-        femaleBirthDate: new Date(formData.femaleBirthDate).toISOString(),
-        maleAge: parseInt(formData.maleAge),
-        femaleAge: parseInt(formData.femaleAge),
+        ...(formData.maleBirthDate && {
+          maleBirthDate: new Date(formData.maleBirthDate).toISOString(),
+        }),
+        ...(formData.femaleBirthDate && {
+          femaleBirthDate: new Date(formData.femaleBirthDate).toISOString(),
+        }),
+        ...(formData.maleAge && { maleAge: parseInt(formData.maleAge) }),
+        ...(formData.femaleAge && { femaleAge: parseInt(formData.femaleAge) }),
         priority: parseInt(formData.priority),
       };
 
@@ -182,6 +409,7 @@ const ReceptionPage = () => {
         if (response.data.success) {
           alert("✅ تم تحديث البيانات بنجاح!");
           setEditingId(null);
+          setEditingPatient(null);
           resetForm();
           fetchTodayPatients();
         }
@@ -214,18 +442,26 @@ const ReceptionPage = () => {
 
   const resetForm = () => {
     setFormData({
+      maleStatus: "NORMAL",
+      femaleStatus: "NORMAL",
       maleName: "",
       maleLastName: "",
       maleFatherName: "",
       maleBirthDate: "",
       maleNationalId: "",
       maleAge: "",
+      maleBirthPlace: "",
+      maleRegistration: "",
+      maleCountry: "",
       femaleName: "",
       femaleLastName: "",
       femaleFatherName: "",
       femaleBirthDate: "",
       femaleNationalId: "",
       femaleAge: "",
+      femaleBirthPlace: "",
+      femaleRegistration: "",
+      femaleCountry: "",
       phoneNumber: "",
       notes: "",
       priority: "0",
@@ -234,23 +470,32 @@ const ReceptionPage = () => {
 
   const handleEdit = (patient: ReceptionData) => {
     setEditingId(patient.queueId);
+    setEditingPatient(patient);
     setFormData({
-      maleName: patient.maleName,
-      maleLastName: patient.maleLastName,
-      maleFatherName: patient.maleFatherName,
-      maleBirthDate: new Date(patient.maleBirthDate)
-        .toISOString()
-        .split("T")[0],
-      maleNationalId: patient.maleNationalId,
-      maleAge: patient.maleAge.toString(),
-      femaleName: patient.femaleName,
-      femaleLastName: patient.femaleLastName,
-      femaleFatherName: patient.femaleFatherName,
-      femaleBirthDate: new Date(patient.femaleBirthDate)
-        .toISOString()
-        .split("T")[0],
-      femaleNationalId: patient.femaleNationalId,
-      femaleAge: patient.femaleAge.toString(),
+      maleStatus: patient.maleStatus || "NORMAL",
+      femaleStatus: patient.femaleStatus || "NORMAL",
+      maleName: patient.maleName || "",
+      maleLastName: patient.maleLastName || "",
+      maleFatherName: patient.maleFatherName || "",
+      maleBirthDate: patient.maleBirthDate
+        ? new Date(patient.maleBirthDate).toISOString().split("T")[0]
+        : "",
+      maleNationalId: patient.maleNationalId || "",
+      maleAge: patient.maleAge?.toString() || "",
+      maleBirthPlace: patient.maleBirthPlace || "",
+      maleRegistration: patient.maleRegistration || "",
+      maleCountry: patient.maleCountry || "",
+      femaleName: patient.femaleName || "",
+      femaleLastName: patient.femaleLastName || "",
+      femaleFatherName: patient.femaleFatherName || "",
+      femaleBirthDate: patient.femaleBirthDate
+        ? new Date(patient.femaleBirthDate).toISOString().split("T")[0]
+        : "",
+      femaleNationalId: patient.femaleNationalId || "",
+      femaleAge: patient.femaleAge?.toString() || "",
+      femaleBirthPlace: patient.femaleBirthPlace || "",
+      femaleRegistration: patient.femaleRegistration || "",
+      femaleCountry: patient.femaleCountry || "",
       phoneNumber: patient.phoneNumber || "",
       notes: patient.notes || "",
       priority: "0",
@@ -259,6 +504,7 @@ const ReceptionPage = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setEditingPatient(null);
     resetForm();
   };
 
@@ -279,7 +525,7 @@ const ReceptionPage = () => {
         {/* Main Form Area - 65% */}
         <div className='flex-1 overflow-y-auto p-6'>
           <div className='card h-full'>
-            <div className='card-header mb-4 flex items-center justify-start'>
+            <div className='card-header mb-4 flex items-center justify-between'>
               <div className=' items-center justify-between'>
                 {editingId ? (
                   ""
@@ -291,18 +537,24 @@ const ReceptionPage = () => {
                 <span className='text-2xl '>
                   {editingId ? "تعديل بيانات المراجع" : "إضافة مراجع جديد"}
                 </span>
+                {editingId && (
+                  <button
+                    type='button'
+                    onClick={handleCancelEdit}
+                    className='mr-4 px-3 py-1 rounded-lg text-sm font-semibold transition duration-200'
+                    style={{
+                      backgroundColor: "#dc2626",
+                      color: "var(--white)",
+                    }}>
+                    ✖ إلغاء التعديل
+                  </button>
+                )}
               </div>
-              {editingId && (
-                <button
-                  type='button'
-                  onClick={handleCancelEdit}
-                  className='mr-4 px-3 py-1 rounded-lg text-sm font-semibold transition duration-200'
-                  style={{
-                    backgroundColor: "#dc2626",
-                    color: "var(--white)",
-                  }}>
-                  ✖ إلغاء التعديل
-                </button>
+
+              {editingPatient && (
+                <span className='text-lg mr-2 text-gray-300 '>
+                  ( ID : {editingPatient?.id} )
+                </span>
               )}
             </div>
 
@@ -318,66 +570,110 @@ const ReceptionPage = () => {
                   style={{ color: "var(--primary)" }}>
                   👨 بيانات الزوج :
                 </h3>
-                <div className='grid grid-cols-3 gap-3'>
-                  <input
-                    type='text'
-                    name='maleName'
-                    value={formData.maleName}
+                <div className='grid grid-cols-3 gap-3 mb-3'>
+                  <select
+                    name='maleStatus'
+                    value={formData.maleStatus}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='الاسم الأول *'
-                    required
-                  />
-                  <input
-                    type='text'
-                    name='maleLastName'
-                    value={formData.maleLastName}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='اسم العائلة *'
-                    required
-                  />
-                  <input
-                    type='text'
-                    name='maleFatherName'
-                    value={formData.maleFatherName}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='اسم الأب *'
-                    required
-                  />
-                  <input
-                    type='date'
-                    name='maleBirthDate'
-                    value={formData.maleBirthDate}
-                    onChange={handleInputChange}
-                    onPaste={(e) => handleDatePaste(e, "maleBirthDate")}
-                    className='input-field text-sm py-3'
-                    placeholder='تاريخ الميلاد (dd/mm/yyyy)'
-                    required
-                  />
-                  <input
-                    type='text'
-                    name='maleNationalId'
-                    value={formData.maleNationalId}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='الرقم الوطني *'
-                    required
-                  />
-
-                  <input
-                    tabIndex={-1}
-                    type='number'
-                    name='maleAge'
-                    value={formData.maleAge}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3 bg-gray-100'
-                    placeholder='العمر (تلقائي) *'
-                    readOnly
-                    required
-                  />
+                    className='input-field text-sm py-3 col-span-3'
+                    required>
+                    <option value='NORMAL'>الزوج موجود</option>
+                    <option value='LEGAL_INVITATION'>دعوة شرعية</option>
+                    <option value='NOT_EXIST'>لا يوجد زوج</option>
+                    <option value='OUT_OF_COUNTRY'>خارج القطر</option>
+                    <option value='OUT_OF_PROVINCE'>خارج المحافظة</option>
+                  </select>
                 </div>
+                {/* إظهار الحقول فقط إذا كانت الحالة NORMAL أو LEGAL_INVITATION */}
+                {(formData.maleStatus === "NORMAL" ||
+                  formData.maleStatus === "LEGAL_INVITATION") && (
+                  <div className='grid grid-cols-3 gap-3'>
+                    <input
+                      type='text'
+                      name='maleName'
+                      value={formData.maleName}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='الاسم الأول *'
+                      required
+                    />
+                    <input
+                      type='text'
+                      name='maleLastName'
+                      value={formData.maleLastName}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='اسم العائلة *'
+                      required
+                    />
+                    <input
+                      type='text'
+                      name='maleFatherName'
+                      value={formData.maleFatherName}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='اسم الأب *'
+                      required
+                    />
+                    <input
+                      type='date'
+                      name='maleBirthDate'
+                      value={formData.maleBirthDate}
+                      onChange={handleInputChange}
+                      onPaste={(e) => handleDatePaste(e, "maleBirthDate")}
+                      className='input-field text-sm py-3'
+                      placeholder='تاريخ الميلاد (dd/mm/yyyy)'
+                      required
+                    />
+                    <input
+                      type='text'
+                      name='maleNationalId'
+                      value={formData.maleNationalId}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='الرقم الوطني *'
+                      required
+                    />
+
+                    <input
+                      type='text'
+                      name='maleBirthPlace'
+                      value={formData.maleBirthPlace}
+                      onChange={handleInputChange}
+                      onBlur={(e) => handleBirthPlaceBlur(e, "maleBirthPlace")}
+                      className='input-field text-sm py-3'
+                      placeholder='مكان الولادة'
+                    />
+                    <input
+                      type='text'
+                      name='maleCountry'
+                      value={formData.maleCountry}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='البلد'
+                    />
+                    <input
+                      tabIndex={-1}
+                      type='text'
+                      name='maleRegistration'
+                      value={formData.maleRegistration}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='القيد'
+                    />
+                    <input
+                      tabIndex={-1}
+                      type='number'
+                      name='maleAge'
+                      value={formData.maleAge}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3 bg-gray-100'
+                      placeholder='العمر (تلقائي) *'
+                      readOnly
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Female Data - Compact Grid */}
@@ -389,65 +685,113 @@ const ReceptionPage = () => {
                   style={{ color: "var(--primary)" }}>
                   👩 بيانات الزوجة :
                 </h3>
-                <div className='grid grid-cols-3 gap-3'>
-                  <input
-                    type='text'
-                    name='femaleName'
-                    value={formData.femaleName}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='الاسم الأول *'
-                    required
-                  />
-                  <input
-                    type='text'
-                    name='femaleLastName'
-                    value={formData.femaleLastName}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='اسم العائلة *'
-                    required
-                  />
-                  <input
-                    type='text'
-                    name='femaleFatherName'
-                    value={formData.femaleFatherName}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='اسم الأب *'
-                    required
-                  />
-                  <input
-                    type='date'
-                    name='femaleBirthDate'
-                    value={formData.femaleBirthDate}
-                    onChange={handleInputChange}
-                    onPaste={(e) => handleDatePaste(e, "femaleBirthDate")}
-                    className='input-field text-sm py-3'
-                    placeholder='تاريخ الميلاد (dd/mm/yyyy)'
-                    required
-                  />
-                  <input
-                    type='text'
-                    name='femaleNationalId'
-                    value={formData.femaleNationalId}
-                    onChange={handleInputChange}
-                    className='input-field text-sm py-3'
-                    placeholder='الرقم الوطني *'
-                    required
-                  />
-                  <input
+                <div className='grid grid-cols-3 gap-3 mb-3'>
+                  <select
                     tabIndex={-1}
-                    type='number'
-                    name='femaleAge'
-                    value={formData.femaleAge}
+                    name='femaleStatus'
+                    value={formData.femaleStatus}
                     onChange={handleInputChange}
-                    className='input-field text-sm py-3 bg-gray-100'
-                    placeholder='العمر (تلقائي) *'
-                    readOnly
-                    required
-                  />
+                    className='input-field text-sm py-3 col-span-3'
+                    required>
+                    <option value='NORMAL'>الزوجة موجودة</option>
+                    <option value='LEGAL_INVITATION'>دعوة شرعية</option>
+                    <option value='NOT_EXIST'>لا يوجد زوجة</option>
+                    <option value='OUT_OF_COUNTRY'>خارج القطر</option>
+                    <option value='OUT_OF_PROVINCE'>خارج المحافظة</option>
+                  </select>
                 </div>
+                {/* إظهار الحقول فقط إذا كانت الحالة NORMAL أو LEGAL_INVITATION */}
+                {(formData.femaleStatus === "NORMAL" ||
+                  formData.femaleStatus === "LEGAL_INVITATION") && (
+                  <div className='grid grid-cols-3 gap-3'>
+                    <input
+                      type='text'
+                      name='femaleName'
+                      value={formData.femaleName}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='الاسم الأول *'
+                      required
+                    />
+                    <input
+                      type='text'
+                      name='femaleLastName'
+                      value={formData.femaleLastName}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='اسم العائلة *'
+                      required
+                    />
+                    <input
+                      type='text'
+                      name='femaleFatherName'
+                      value={formData.femaleFatherName}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='اسم الأب *'
+                      required
+                    />
+                    <input
+                      type='date'
+                      name='femaleBirthDate'
+                      value={formData.femaleBirthDate}
+                      onChange={handleInputChange}
+                      onPaste={(e) => handleDatePaste(e, "femaleBirthDate")}
+                      className='input-field text-sm py-3'
+                      placeholder='تاريخ الميلاد (dd/mm/yyyy)'
+                      required
+                    />
+                    <input
+                      type='text'
+                      name='femaleNationalId'
+                      value={formData.femaleNationalId}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='الرقم الوطني *'
+                      required
+                    />
+
+                    <input
+                      type='text'
+                      name='femaleBirthPlace'
+                      value={formData.femaleBirthPlace}
+                      onChange={handleInputChange}
+                      onBlur={(e) =>
+                        handleBirthPlaceBlur(e, "femaleBirthPlace")
+                      }
+                      className='input-field text-sm py-3'
+                      placeholder='مكان الولادة'
+                    />
+                    <input
+                      type='text'
+                      name='femaleCountry'
+                      value={formData.femaleCountry}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='البلد'
+                    />
+                    <input
+                      tabIndex={-1}
+                      type='text'
+                      name='femaleRegistration'
+                      value={formData.femaleRegistration}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3'
+                      placeholder='القيد'
+                    />
+                    <input
+                      tabIndex={-1}
+                      type='number'
+                      name='femaleAge'
+                      value={formData.femaleAge}
+                      onChange={handleInputChange}
+                      className='input-field text-sm py-3 bg-gray-100'
+                      placeholder='العمر (تلقائي) *'
+                      readOnly
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Additional Info - Compact */}
@@ -539,24 +883,51 @@ const ReceptionPage = () => {
                         style={{ color: "var(--primary)" }}>
                         #{patient.queue.queueNumber}
                       </div>
-                      <div className='text-xs' style={{ color: "var(--dark)" }}>
-                        {new Date(patient.createdAt).toLocaleTimeString(
-                          "ar-SA",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }
-                        )}
+                      <div className='flex flex-row text-xs px-4 text-gray-400'>
+                        <span className='text-xs px-4 text-gray-400'>
+                          ID : {patient.id}
+                        </span>
+                        <div
+                          className='text-xs'
+                          style={{ color: "var(--dark)" }}>
+                          {new Date(patient.createdAt).toLocaleTimeString(
+                            "ar-SA",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className='space-y-1 text-sm'>
                       <div style={{ color: "var(--dark)" }}>
-                        <span className='font-semibold'>👨 </span>
-                        {patient.maleName} {patient.maleLastName}
+                        <span className='font-bold'> 🧑 الزوج : </span>
+                        {patient.maleName != null ? (
+                          `${patient.maleName} ${patient.maleLastName}`
+                        ) : patient.maleStatus === "NOT_EXIST" ? (
+                          <span className='text-red-500'>لا يوجد زوج</span>
+                        ) : patient.maleStatus === "OUT_OF_COUNTRY" ? (
+                          <span className='text-red-500'>خارج القطر</span>
+                        ) : patient.maleStatus === "OUT_OF_PROVINCE" ? (
+                          <span className='text-red-500'>خارج المحافظة</span>
+                        ) : (
+                          "-"
+                        )}
                       </div>
                       <div style={{ color: "var(--dark)" }}>
-                        <span className='font-semibold'>👩 </span>
-                        {patient.femaleName} {patient.femaleLastName}
+                        <span className='font-bold'>👩 الزوجة : </span>
+                        {patient.femaleName != null ? (
+                          `${patient.femaleName} ${patient.femaleLastName}`
+                        ) : patient.femaleStatus === "NOT_EXIST" ? (
+                          <span className='text-red-500'>لا يوجد زوجة</span>
+                        ) : patient.femaleStatus === "OUT_OF_COUNTRY" ? (
+                          <span className='text-red-500'>خارج القطر</span>
+                        ) : patient.femaleStatus === "OUT_OF_PROVINCE" ? (
+                          <span className='text-red-500'>خارج المحافظة</span>
+                        ) : (
+                          "-"
+                        )}
                       </div>
                       {patient.phoneNumber && (
                         <div

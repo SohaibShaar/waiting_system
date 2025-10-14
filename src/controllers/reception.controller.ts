@@ -15,61 +15,164 @@ import { emitScreenDataUpdate, emitNewQueue, emitQueueUpdate } from "..";
 export async function addReceptionData(req: Request, res: Response) {
   try {
     const {
+      maleStatus,
+      femaleStatus,
       maleName,
       maleLastName,
       maleFatherName,
       maleBirthDate,
       maleNationalId,
       maleAge,
+      maleBirthPlace,
+      maleRegistration,
+      maleCountry,
       femaleName,
       femaleLastName,
       femaleFatherName,
       femaleBirthDate,
       femaleNationalId,
       femaleAge,
+      femaleBirthPlace,
+      femaleRegistration,
+      femaleCountry,
       phoneNumber,
       notes,
       priority,
     } = req.body;
 
-    // التحقق من البيانات المطلوبة
-    if (
-      !maleName ||
-      !maleLastName ||
-      !maleFatherName ||
-      !maleBirthDate ||
-      !maleNationalId ||
-      maleAge === undefined ||
-      !femaleName ||
-      !femaleLastName ||
-      !femaleFatherName ||
-      !femaleBirthDate ||
-      !femaleNationalId ||
-      femaleAge === undefined
-    ) {
+    // التحقق من وجود الحالة
+    if (!maleStatus || !femaleStatus) {
       return res.status(400).json({
         success: false,
-        error: "جميع بيانات الزوجين مطلوبة",
+        error: "حالة الزوج والزوجة مطلوبة",
       });
     }
 
+    // التحقق من البيانات المطلوبة بناءً على الحالة
+    // إذا كانت الحالة NORMAL، يجب أن تكون جميع البيانات موجودة
+    if (maleStatus === "NORMAL" && femaleStatus === "NORMAL") {
+      if (
+        !maleName ||
+        !maleLastName ||
+        !maleFatherName ||
+        !maleBirthDate ||
+        !maleNationalId ||
+        maleAge === undefined ||
+        !femaleName ||
+        !femaleLastName ||
+        !femaleFatherName ||
+        !femaleBirthDate ||
+        !femaleNationalId ||
+        femaleAge === undefined
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "في الحالة العادية، جميع بيانات الزوجين مطلوبة",
+        });
+      }
+    }
+
+    // التحقق من وجود بيانات الزوج إذا كانت حالته NORMAL أو LEGAL_INVITATION
+    if (maleStatus === "NORMAL" || maleStatus === "LEGAL_INVITATION") {
+      if (
+        !maleName ||
+        !maleLastName ||
+        !maleFatherName ||
+        !maleBirthDate ||
+        !maleNationalId ||
+        maleAge === undefined
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "بيانات الزوج مطلوبة عندما تكون حالته عادية أو دعوة شرعية",
+        });
+      }
+    }
+
+    // التحقق من وجود بيانات الزوجة إذا كانت حالتها NORMAL أو LEGAL_INVITATION
+    if (femaleStatus === "NORMAL" || femaleStatus === "LEGAL_INVITATION") {
+      if (
+        !femaleName ||
+        !femaleLastName ||
+        !femaleFatherName ||
+        !femaleBirthDate ||
+        !femaleNationalId ||
+        femaleAge === undefined
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "بيانات الزوجة مطلوبة عندما تكون حالتها عادية أو دعوة شرعية",
+        });
+      }
+    }
+
     // إنشاء مراجع ودور جديد مع بيانات الاستقبال
+    // تنظيف البيانات: تحويل النصوص الفارغة إلى undefined
+    const cleanString = (val: any) =>
+      val && val.trim() !== "" ? val.trim() : undefined;
+    const cleanNumber = (val: any) =>
+      val !== undefined && val !== null && val !== "" ? Number(val) : undefined;
+
     const result = await createReceptionData({
-      maleName,
-      maleLastName,
-      maleFatherName,
-      maleBirthDate: new Date(maleBirthDate),
-      maleNationalId,
-      maleAge,
-      femaleName,
-      femaleLastName,
-      femaleFatherName,
-      femaleBirthDate: new Date(femaleBirthDate),
-      femaleNationalId,
-      femaleAge,
-      ...(phoneNumber && { phoneNumber }),
-      ...(notes && { notes }),
-      ...(priority !== undefined && { priority }),
+      maleStatus,
+      femaleStatus,
+      ...(cleanString(maleName) && { maleName: cleanString(maleName) }),
+      ...(cleanString(maleLastName) && {
+        maleLastName: cleanString(maleLastName),
+      }),
+      ...(cleanString(maleFatherName) && {
+        maleFatherName: cleanString(maleFatherName),
+      }),
+      ...(cleanString(maleBirthDate) && {
+        maleBirthDate: new Date(maleBirthDate),
+      }),
+      ...(cleanString(maleNationalId) && {
+        maleNationalId: cleanString(maleNationalId),
+      }),
+      ...(cleanNumber(maleAge) !== undefined && {
+        maleAge: cleanNumber(maleAge),
+      }),
+      ...(cleanString(maleBirthPlace) && {
+        maleBirthPlace: cleanString(maleBirthPlace),
+      }),
+      ...(cleanString(maleRegistration) && {
+        maleRegistration: cleanString(maleRegistration),
+      }),
+      ...(cleanString(maleCountry) && {
+        maleCountry: cleanString(maleCountry),
+      }),
+      ...(cleanString(femaleName) && { femaleName: cleanString(femaleName) }),
+      ...(cleanString(femaleLastName) && {
+        femaleLastName: cleanString(femaleLastName),
+      }),
+      ...(cleanString(femaleFatherName) && {
+        femaleFatherName: cleanString(femaleFatherName),
+      }),
+      ...(cleanString(femaleBirthDate) && {
+        femaleBirthDate: new Date(femaleBirthDate),
+      }),
+      ...(cleanString(femaleNationalId) && {
+        femaleNationalId: cleanString(femaleNationalId),
+      }),
+      ...(cleanNumber(femaleAge) !== undefined && {
+        femaleAge: cleanNumber(femaleAge),
+      }),
+      ...(cleanString(femaleBirthPlace) && {
+        femaleBirthPlace: cleanString(femaleBirthPlace),
+      }),
+      ...(cleanString(femaleRegistration) && {
+        femaleRegistration: cleanString(femaleRegistration),
+      }),
+      ...(cleanString(femaleCountry) && {
+        femaleCountry: cleanString(femaleCountry),
+      }),
+      ...(cleanString(phoneNumber) && {
+        phoneNumber: cleanString(phoneNumber),
+      }),
+      ...(cleanString(notes) && { notes: cleanString(notes) }),
+      ...(cleanNumber(priority) !== undefined && {
+        priority: cleanNumber(priority),
+      }),
     });
 
     // إرسال إشعارات WebSocket

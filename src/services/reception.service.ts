@@ -2,6 +2,7 @@ import {
   PrismaClient,
   OverallQueueStatus,
   QueueStatus,
+  SpouseStatus,
 } from "../generated/prisma";
 
 const prisma = new PrismaClient();
@@ -32,27 +33,71 @@ async function updateLastQueueNumber(number: number): Promise<void> {
  * هذه هي نقطة البداية في النظام
  */
 async function createReceptionData(data: {
-  maleName: string;
-  maleLastName: string;
-  maleFatherName: string;
-  maleBirthDate: Date;
-  maleNationalId: string;
-  maleAge: number;
-  femaleName: string;
-  femaleLastName: string;
-  femaleFatherName: string;
-  femaleBirthDate: Date;
-  femaleNationalId: string;
-  femaleAge: number;
+  // حالة الزوجين
+  maleStatus: SpouseStatus;
+  femaleStatus: SpouseStatus;
+  // بيانات الزوج (اختيارية حسب الحالة)
+  maleName?: string;
+  maleLastName?: string;
+  maleFatherName?: string;
+  maleBirthDate?: Date;
+  maleNationalId?: string;
+  maleAge?: number;
+  maleBirthPlace?: string;
+  maleRegistration?: string;
+  maleCountry?: string;
+  // بيانات الزوجة (اختيارية حسب الحالة)
+  femaleName?: string;
+  femaleLastName?: string;
+  femaleFatherName?: string;
+  femaleBirthDate?: Date;
+  femaleNationalId?: string;
+  femaleAge?: number;
+  femaleBirthPlace?: string;
+  femaleRegistration?: string;
+  femaleCountry?: string;
+  // بيانات عامة
   phoneNumber?: string;
   notes?: string;
   priority?: number;
 }) {
-  // 1. إنشاء المراجع باسم الذكر ورقمه الوطني
+  // 1. تحديد الاسم والرقم الوطني للمراجع بناءً على الحالة
+  let patientName = "";
+  let patientNationalId = "";
+
+  if (data.maleStatus === SpouseStatus.NORMAL) {
+    // حالة عادية - نستخدم بيانات الزوج
+    patientName = `${data.maleName} ${data.maleLastName}`;
+    patientNationalId = data.maleNationalId || "";
+  } else if (
+    data.maleStatus === SpouseStatus.LEGAL_INVITATION &&
+    data.maleName
+  ) {
+    // دعوة شرعية للزوج فقط
+    patientName = `${data.maleName} ${data.maleLastName}`;
+    patientNationalId = data.maleNationalId || "";
+  } else if (
+    data.femaleStatus === SpouseStatus.LEGAL_INVITATION &&
+    data.femaleName
+  ) {
+    // دعوة شرعية للزوجة فقط
+    patientName = `${data.femaleName} ${data.femaleLastName}`;
+    patientNationalId = data.femaleNationalId || "";
+  } else if (data.maleName && data.maleLastName) {
+    // استخدام بيانات الزوج إذا كانت موجودة
+    patientName = `${data.maleName} ${data.maleLastName}`;
+    patientNationalId = data.maleNationalId || "";
+  } else if (data.femaleName && data.femaleLastName) {
+    // استخدام بيانات الزوجة إذا كانت موجودة
+    patientName = `${data.femaleName} ${data.femaleLastName}`;
+    patientNationalId = data.femaleNationalId || "";
+  }
+
+  // 2. إنشاء المراجع
   const patient = await prisma.patient.create({
     data: {
-      name: `${data.maleName} ${data.maleLastName}`,
-      nationalId: data.maleNationalId,
+      name: patientName,
+      nationalId: patientNationalId || null,
       ...(data.phoneNumber && { phoneNumber: data.phoneNumber }),
     },
   });
@@ -61,11 +106,11 @@ async function createReceptionData(data: {
     `✅ تم إنشاء المراجع: ${patient.name} - رقم وطني: ${patient.nationalId}`
   );
 
-  // 2. الحصول على رقم الدور التالي
+  // 3. الحصول على رقم الدور التالي
   const lastNumber = await getLastQueueNumber();
   const newQueueNumber = lastNumber + 1;
 
-  // 3. الحصول على أول محطة نشطة (الاستقبال)
+  // 4. الحصول على أول محطة نشطة (الاستقبال)
   const receptionStation = await prisma.station.findFirst({
     where: { isActive: true },
     orderBy: { order: "asc" },
@@ -136,20 +181,32 @@ async function createReceptionData(data: {
     data: {
       queueId: queue.id,
       patientId: patient.id,
-      maleName: data.maleName,
-      maleLastName: data.maleLastName,
-      maleFatherName: data.maleFatherName,
-      maleBirthDate: data.maleBirthDate,
-      maleNationalId: data.maleNationalId,
-      maleAge: data.maleAge,
-      femaleName: data.femaleName,
-      femaleLastName: data.femaleLastName,
-      femaleFatherName: data.femaleFatherName,
-      femaleBirthDate: data.femaleBirthDate,
-      femaleNationalId: data.femaleNationalId,
-      femaleAge: data.femaleAge,
-      ...(data.phoneNumber && { phoneNumber: data.phoneNumber }),
-      ...(data.notes && { notes: data.notes }),
+      // حالة الزوجين
+      maleStatus: data.maleStatus,
+      femaleStatus: data.femaleStatus,
+      // بيانات الزوج
+      maleName: data.maleName || null,
+      maleLastName: data.maleLastName || null,
+      maleFatherName: data.maleFatherName || null,
+      maleBirthDate: data.maleBirthDate || null,
+      maleNationalId: data.maleNationalId || null,
+      maleAge: data.maleAge !== undefined ? data.maleAge : null,
+      maleBirthPlace: data.maleBirthPlace || null,
+      maleRegistration: data.maleRegistration || null,
+      maleCountry: data.maleCountry || null,
+      // بيانات الزوجة
+      femaleName: data.femaleName || null,
+      femaleLastName: data.femaleLastName || null,
+      femaleFatherName: data.femaleFatherName || null,
+      femaleBirthDate: data.femaleBirthDate || null,
+      femaleNationalId: data.femaleNationalId || null,
+      femaleAge: data.femaleAge !== undefined ? data.femaleAge : null,
+      femaleBirthPlace: data.femaleBirthPlace || null,
+      femaleRegistration: data.femaleRegistration || null,
+      femaleCountry: data.femaleCountry || null,
+      // بيانات عامة
+      phoneNumber: data.phoneNumber || null,
+      notes: data.notes || null,
     },
     include: {
       queue: {
@@ -225,25 +282,44 @@ async function getTodayReceptionData() {
 async function updateReceptionData(
   queueId: number,
   data: Partial<{
+    maleStatus: SpouseStatus;
+    femaleStatus: SpouseStatus;
     maleName: string;
     maleLastName: string;
     maleFatherName: string;
     maleBirthDate: Date;
     maleNationalId: string;
     maleAge: number;
+    maleBirthPlace: string;
+    maleRegistration: string;
+    maleCountry: string;
     femaleName: string;
     femaleLastName: string;
     femaleFatherName: string;
     femaleBirthDate: Date;
     femaleNationalId: string;
     femaleAge: number;
+    femaleBirthPlace: string;
+    femaleRegistration: string;
+    femaleCountry: string;
     phoneNumber: string;
     notes: string;
   }>
 ) {
+  // تحويل القيم الفارغة إلى null
+  const cleanedData: any = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (value === "" || value === undefined) {
+      cleanedData[key] = null;
+    } else {
+      cleanedData[key] = value;
+    }
+  }
+
   return await prisma.receptionData.update({
     where: { queueId },
-    data,
+    data: cleanedData,
   });
 }
 
