@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Header from "../components/Header";
@@ -85,6 +86,51 @@ const ReceptionPage = () => {
       age--;
     }
     return age;
+  };
+
+  // دالة لتحويل dd/mm/yyyy إلى yyyy-mm-dd
+  const parseDateFromPaste = (dateStr: string): string => {
+    // إزالة المسافات والأحرف الزائدة
+    const cleaned = dateStr.trim();
+
+    // التحقق من تنسيق dd/mm/yyyy
+    const ddmmyyyyRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+    const match = cleaned.match(ddmmyyyyRegex);
+
+    if (match) {
+      const day = match[1].padStart(2, "0");
+      const month = match[2].padStart(2, "0");
+      const year = match[3];
+      return `${year}-${month}-${day}`; // yyyy-mm-dd
+    }
+
+    return cleaned; // إرجاع القيمة كما هي إذا لم تطابق التنسيق
+  };
+
+  const handleDatePaste = (
+    e: React.ClipboardEvent<HTMLInputElement>,
+    fieldName: string
+  ) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData("text");
+    const formattedDate = parseDateFromPaste(pastedText);
+
+    // تحديث القيمة وحساب العمر
+    const age = calculateAge(formattedDate);
+
+    if (fieldName === "maleBirthDate") {
+      setFormData((prev) => ({
+        ...prev,
+        maleBirthDate: formattedDate,
+        maleAge: age.toString(),
+      }));
+    } else if (fieldName === "femaleBirthDate") {
+      setFormData((prev) => ({
+        ...prev,
+        femaleBirthDate: formattedDate,
+        femaleAge: age.toString(),
+      }));
+    }
   };
 
   const handleInputChange = (
@@ -216,6 +262,13 @@ const ReceptionPage = () => {
     resetForm();
   };
 
+  const el = document.getElementById("stopHere");
+  el?.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault(); // يمنع انتقال التركيز
+    }
+  });
+
   return (
     <div
       className='h-screen flex flex-col'
@@ -298,7 +351,9 @@ const ReceptionPage = () => {
                     name='maleBirthDate'
                     value={formData.maleBirthDate}
                     onChange={handleInputChange}
+                    onPaste={(e) => handleDatePaste(e, "maleBirthDate")}
                     className='input-field text-sm py-3'
+                    placeholder='تاريخ الميلاد (dd/mm/yyyy)'
                     required
                   />
                   <input
@@ -310,7 +365,9 @@ const ReceptionPage = () => {
                     placeholder='الرقم الوطني *'
                     required
                   />
+
                   <input
+                    tabIndex={-1}
                     type='number'
                     name='maleAge'
                     value={formData.maleAge}
@@ -365,7 +422,9 @@ const ReceptionPage = () => {
                     name='femaleBirthDate'
                     value={formData.femaleBirthDate}
                     onChange={handleInputChange}
+                    onPaste={(e) => handleDatePaste(e, "femaleBirthDate")}
                     className='input-field text-sm py-3'
+                    placeholder='تاريخ الميلاد (dd/mm/yyyy)'
                     required
                   />
                   <input
@@ -378,6 +437,7 @@ const ReceptionPage = () => {
                     required
                   />
                   <input
+                    tabIndex={-1}
                     type='number'
                     name='femaleAge'
                     value={formData.femaleAge}
@@ -393,6 +453,7 @@ const ReceptionPage = () => {
               {/* Additional Info - Compact */}
               <div className='grid grid-cols-3 gap-4'>
                 <input
+                  tabIndex={-1}
                   type='tel'
                   name='phoneNumber'
                   value={formData.phoneNumber}
@@ -402,6 +463,7 @@ const ReceptionPage = () => {
                 />
 
                 <textarea
+                  tabIndex={-1}
                   name='notes'
                   value={formData.notes}
                   onChange={handleInputChange}
@@ -423,6 +485,7 @@ const ReceptionPage = () => {
               {/* Submit Button */}
               <div className='flex justify-center'>
                 <button
+                  id='stopHere'
                   type='submit'
                   disabled={loading}
                   className='btn-primary px-8 py-2 text-base disabled:opacity-50'>
