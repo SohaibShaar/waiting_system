@@ -6,6 +6,8 @@ import {
   updateQueuePriority,
   cancelQueueById,
   completeQueueById,
+  getCancelledQueues,
+  reinstateQueueById,
 } from "../controllers/queue.controller";
 
 const router = Router();
@@ -45,5 +47,17 @@ router.delete("/:id/cancel", cancelQueueById);
  * إنهاء دور بالكامل
  */
 router.post("/:id/complete", completeQueueById);
+
+/**
+ * GET /api/queue/cancelled/today
+ * الحصول على الأدوار الملغاة لليوم الحالي
+ */
+router.get("/cancelled/today", getCancelledQueues);
+
+/**
+ * POST /api/queue/:id/reinstate
+ * إعادة تفعيل دور ملغى
+ */
+router.post("/:id/reinstate", reinstateQueueById);
 
 export default router;

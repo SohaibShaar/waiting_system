@@ -44,6 +44,27 @@ interface ReceptionData {
   };
 }
 
+interface CancelledQueue {
+  id: number;
+  queueNumber: number;
+  patientId: number;
+  currentStationId: number;
+  status: string;
+  priority: number;
+  notes?: string;
+  createdAt: string;
+  patient: {
+    id: number;
+    name: string;
+  };
+  currentStation: {
+    id: number;
+    name: string;
+    displayNumber: number;
+  };
+  ReceptionData?: ReceptionData;
+}
+
 const ReceptionPage = () => {
   // قائمة المدن السورية
   const syrianCities = [
@@ -177,6 +198,11 @@ const ReceptionPage = () => {
     null
   );
 
+  // Cancelled Queues Modal
+  const [showCancelledModal, setShowCancelledModal] = useState(false);
+  const [cancelledQueues, setCancelledQueues] = useState<CancelledQueue[]>([]);
+  const [loadingCancelled, setLoadingCancelled] = useState(false);
+
   // WebSocket for real-time updates
   const { updateTrigger } = useQueueUpdates();
 
@@ -193,6 +219,67 @@ const ReceptionPage = () => {
     } catch (error) {
       console.error("خطأ في جلب البيانات:", error);
     }
+  };
+
+  const fetchCancelledQueues = async () => {
+    setLoadingCancelled(true);
+    try {
+      const response = await axios.get(`${API_URL}/queue/cancelled/today`);
+      if (response.data.success) {
+        setCancelledQueues(response.data.queues);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الأدوار الملغاة:", error);
+      alert("❌ خطأ في جلب الأدوار الملغاة");
+    } finally {
+      setLoadingCancelled(false);
+    }
+  };
+
+  const handleReinstateQueue = async (queueId: number, queueNumber: number) => {
+    if (!confirm(`هل تريد إعادة طباعة الدور #${queueNumber}؟`)) {
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/queue/${queueId}/reinstate`
+      );
+      if (response.data.success) {
+        alert(`✅ تم إنشاء الدور الجديد #${response.data.queueNumber}`);
+
+        // طباعة الدور الجديد
+        printQueueNumber(
+          response.data.queueNumber,
+          response.data.newQueue.patientId
+        );
+
+        // إزالة الدور من القائمة
+        setCancelledQueues((prev) => prev.filter((q) => q.id !== queueId));
+
+        // تحديث قائمة المرضى
+        fetchTodayPatients();
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response &&
+        error.response.data &&
+        typeof error.response.data === "object" &&
+        "error" in error.response.data
+          ? String(error.response.data.error)
+          : "حدث خطأ غير متوقع";
+      alert("❌ خطأ: " + errorMessage);
+    }
+  };
+
+  const handleOpenCancelledModal = () => {
+    setShowCancelledModal(true);
+    fetchCancelledQueues();
   };
 
   const calculateAge = (birthDate: string): number => {
@@ -1038,11 +1125,19 @@ const ReceptionPage = () => {
           <div
             className='p-3 font-bold text-white text-center flex-shrink-0'
             style={{ backgroundColor: "#988561" }}>
-            <div className='flex flex-row items-center justify-center text-base gap-2'>
-              <span className='bg-white cursor-default text-[#988561] w-5 h-5 rounded-full text-lg font-bold inline-flex items-center justify-center'>
-                !
-              </span>
-              <span>المراجعون المضافون اليوم ( {todayPatients.length} )</span>
+            <div className='flex flex-row items-center justify-between text-base gap-2'>
+              <button
+                onClick={handleOpenCancelledModal}
+                className='bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm font-semibold transition duration-200 flex items-center gap-1'
+                title='عرض الأدوار الملغاة'>
+                🔄 الملغاة
+              </button>
+              <div className='flex flex-row items-center gap-2'>
+                <span className='bg-white cursor-default text-[#988561] w-5 h-5 rounded-full text-lg font-bold inline-flex items-center justify-center'>
+                  !
+                </span>
+                <span>المراجعون المضافون اليوم ( {todayPatients.length} )</span>
+              </div>
             </div>
           </div>
 
@@ -1216,6 +1311,149 @@ const ReceptionPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal للأدوار الملغاة */}
+      {showCancelledModal && (
+        <div
+          className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+          onClick={() => setShowCancelledModal(false)}>
+          <div
+            className='bg-white rounded-lg shadow-2xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden'
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className='bg-red-600 text-white p-4 flex items-center justify-between'>
+              <h2 className='text-xl font-bold flex items-center gap-2'>
+                🔄 الأدوار الملغاة اليوم ({cancelledQueues.length})
+              </h2>
+              <button
+                onClick={() => setShowCancelledModal(false)}
+                className='text-white hover:text-gray-200 text-2xl font-bold transition'>
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className='p-4 overflow-y-auto max-h-[calc(90vh-80px)]'>
+              {loadingCancelled ? (
+                <div className='text-center py-8'>
+                  <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto'></div>
+                  <p className='mt-4 text-gray-600'>جاري التحميل...</p>
+                </div>
+              ) : cancelledQueues.length === 0 ? (
+                <div className='text-center py-12'>
+                  <div className='text-6xl mb-4'>✅</div>
+                  <p className='text-xl text-gray-600'>
+                    لا توجد أدوار ملغاة اليوم
+                  </p>
+                </div>
+              ) : (
+                <div className='space-y-3'>
+                  {cancelledQueues.map((queue) => {
+                    const receptionData = queue.ReceptionData;
+                    const patientName =
+                      receptionData?.maleName && receptionData?.maleLastName
+                        ? `${receptionData.maleName} ${receptionData.maleLastName}`
+                        : receptionData?.femaleName &&
+                          receptionData?.femaleLastName
+                        ? `${receptionData.femaleName} ${receptionData.femaleLastName}`
+                        : queue.patient.name;
+
+                    return (
+                      <div
+                        key={queue.id}
+                        className='border-2 border-gray-300 rounded-lg p-4 hover:shadow-lg transition-all duration-200 bg-gray-50'>
+                        <div className='flex items-center justify-between'>
+                          {/* معلومات الدور */}
+                          <div className='flex-1'>
+                            <div className='flex items-center gap-3 mb-2'>
+                              <span className='bg-red-600 text-white px-4 py-2 rounded-lg text-xl font-bold'>
+                                #{queue.queueNumber}
+                              </span>
+                              <div>
+                                <h3 className='text-lg font-bold text-gray-800'>
+                                  {patientName}
+                                </h3>
+                                <p className='text-sm text-gray-600'>
+                                  ID: {queue.patientId}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className='grid grid-cols-2 gap-2 text-sm mt-3'>
+                              <div className='flex items-center gap-2'>
+                                <span className='font-semibold text-gray-700'>
+                                  المحطة:
+                                </span>
+                                <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded'>
+                                  {queue.currentStation.name}
+                                </span>
+                              </div>
+                              <div className='flex items-center gap-2'>
+                                <span className='font-semibold text-gray-700'>
+                                  الوقت:
+                                </span>
+                                <span className='text-gray-600'>
+                                  {new Date(queue.createdAt).toLocaleTimeString(
+                                    "ar-SA",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </span>
+                              </div>
+                              {queue.priority === 1 && (
+                                <div className='col-span-2'>
+                                  <span className='bg-orange-500 text-white px-2 py-1 rounded text-xs'>
+                                    مُستعجل
+                                  </span>
+                                </div>
+                              )}
+                              {queue.notes && (
+                                <div className='col-span-2'>
+                                  <span className='font-semibold text-gray-700'>
+                                    ملاحظات:
+                                  </span>
+                                  <p className='text-gray-600 text-xs mt-1'>
+                                    {queue.notes}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* زر إعادة الطباعة */}
+                          <div className='mr-4'>
+                            <button
+                              onClick={() =>
+                                handleReinstateQueue(
+                                  queue.id,
+                                  queue.queueNumber
+                                )
+                              }
+                              className='bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition duration-200 shadow-lg hover:shadow-xl flex items-center gap-2'>
+                              🖨️ إعادة طباعة
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className='bg-gray-100 p-4 flex justify-end gap-3 border-t'>
+              <button
+                onClick={() => setShowCancelledModal(false)}
+                className='bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-semibold transition duration-200'>
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

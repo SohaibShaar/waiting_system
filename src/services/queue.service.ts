@@ -120,6 +120,170 @@ async function createNewQueue(patientData: {
 // ============================================
 
 /**
+ * الحصول على الأدوار الملغاة لليوم الحالي
+ */
+async function getCancelledQueuesForToday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  return await prisma.queue.findMany({
+    where: {
+      status: OverallQueueStatus.CANCELLED,
+      createdAt: {
+        gte: today,
+        lt: tomorrow,
+      },
+    },
+    include: {
+      patient: true,
+      currentStation: true,
+      ReceptionData: true,
+      history: {
+        include: {
+          station: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+/**
+ * إعادة تفعيل دور ملغى بإنشاء دور جديد
+ * يتم حذف الدور القديم من قاعدة البيانات بعد إنشاء الدور الجديد
+ */
+async function reinstateQueue(queueId: number) {
+  // 1. جلب الدور الملغى مع بياناته
+  const cancelledQueue = await prisma.queue.findUnique({
+    where: { id: queueId },
+    include: {
+      patient: true,
+      currentStation: true,
+      ReceptionData: true,
+    },
+  });
+
+  if (!cancelledQueue) {
+    throw new Error("❌ الدور غير موجود");
+  }
+
+  if (cancelledQueue.status !== OverallQueueStatus.CANCELLED) {
+    throw new Error("❌ الدور ليس ملغياً");
+  }
+
+  if (!cancelledQueue.ReceptionData) {
+    throw new Error("❌ لا توجد بيانات استقبال لهذا الدور");
+  }
+
+  // 2. الحصول على رقم دور جديد
+  const lastNumber = await getLastQueueNumber();
+  const newQueueNumber = lastNumber + 1;
+
+  // 3. المحطة التي سيبدأ منها الدور الجديد
+  const targetStation = cancelledQueue.currentStation;
+
+  // 4. إنشاء Queue جديد
+  const newQueue = await prisma.queue.create({
+    data: {
+      queueNumber: newQueueNumber,
+      patientId: cancelledQueue.patientId,
+      currentStationId: targetStation.id,
+      status: OverallQueueStatus.ACTIVE,
+      priority: cancelledQueue.priority,
+      notes: cancelledQueue.notes
+        ? `${cancelledQueue.notes} (مُعاد من #${cancelledQueue.queueNumber})`
+        : `مُعاد من الدور #${cancelledQueue.queueNumber}`,
+    },
+    include: {
+      patient: true,
+      currentStation: true,
+    },
+  });
+
+  // 5. نسخ بيانات ReceptionData إلى الدور الجديد
+  const oldReceptionData = cancelledQueue.ReceptionData;
+  await prisma.receptionData.create({
+    data: {
+      queueId: newQueue.id,
+      patientId: newQueue.patientId,
+      maleStatus: oldReceptionData.maleStatus,
+      femaleStatus: oldReceptionData.femaleStatus,
+      maleName: oldReceptionData.maleName,
+      maleLastName: oldReceptionData.maleLastName,
+      maleFatherName: oldReceptionData.maleFatherName,
+      maleBirthDate: oldReceptionData.maleBirthDate,
+      maleNationalId: oldReceptionData.maleNationalId,
+      maleAge: oldReceptionData.maleAge,
+      maleBirthPlace: oldReceptionData.maleBirthPlace,
+      maleRegistration: oldReceptionData.maleRegistration,
+      maleCountry: oldReceptionData.maleCountry,
+      femaleName: oldReceptionData.femaleName,
+      femaleLastName: oldReceptionData.femaleLastName,
+      femaleFatherName: oldReceptionData.femaleFatherName,
+      femaleBirthDate: oldReceptionData.femaleBirthDate,
+      femaleNationalId: oldReceptionData.femaleNationalId,
+      femaleAge: oldReceptionData.femaleAge,
+      femaleBirthPlace: oldReceptionData.femaleBirthPlace,
+      femaleRegistration: oldReceptionData.femaleRegistration,
+      femaleCountry: oldReceptionData.femaleCountry,
+      phoneNumber: oldReceptionData.phoneNumber,
+      notes: oldReceptionData.notes,
+    },
+  });
+
+  // 6. إنشاء QueueHistory بحالة WAITING للمحطة الحالية
+  await prisma.queueHistory.create({
+    data: {
+      queueId: newQueue.id,
+      stationId: targetStation.id,
+      status: QueueStatus.WAITING,
+    },
+  });
+
+  // 7. تحديث آخر رقم دور
+  await updateLastQueueNumber(newQueueNumber);
+
+  // 8. حذف الدور القديم الملغى من قاعدة البيانات
+  // يجب حذف البيانات المرتبطة أولاً بسبب القيود الخارجية (foreign keys)
+
+  // حذف ReceptionData القديمة
+  await prisma.receptionData.delete({
+    where: { queueId: cancelledQueue.id },
+  });
+
+  // حذف QueueHistory القديمة
+  await prisma.queueHistory.deleteMany({
+    where: { queueId: cancelledQueue.id },
+  });
+
+  // حذف الدور القديم
+  await prisma.queue.delete({
+    where: { id: cancelledQueue.id },
+  });
+
+  console.log(
+    `✅ تم إعادة تفعيل الدور #${cancelledQueue.queueNumber} بالرقم الجديد #${newQueueNumber}`
+  );
+  console.log(
+    `🗑️ تم حذف الدور القديم #${cancelledQueue.queueNumber} من قاعدة البيانات`
+  );
+
+  return {
+    newQueue,
+    queueNumber: newQueueNumber,
+    station: targetStation,
+  };
+}
+
+/**
  * الحصول على قائمة المراجعون المنتظرين لمحطة معينة
  */
 async function getStationWaitingList(stationId: number) {
@@ -364,6 +528,8 @@ export {
   updateLastQueueNumber,
   resetQueueNumbers,
   createNewQueue,
+  getCancelledQueuesForToday,
+  reinstateQueue,
   getStationWaitingList,
   getCurrentPatientInStation,
   getAllActiveQueues,

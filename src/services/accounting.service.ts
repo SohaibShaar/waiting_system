@@ -32,7 +32,7 @@ async function createAccountingData(data: {
   });
 
   console.log(
-    `✅ تم حفظ بيانات المحاسبة للدور #${accountingData.queue.queueNumber}`
+    `✅ تم حفظ بيانات المحاسبة للدور #${accountingData.queue?.queueNumber || 0}`
   );
 
   // لا يتم استدعاء المراجع التالي تلقائياً

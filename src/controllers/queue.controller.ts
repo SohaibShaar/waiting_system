@@ -5,8 +5,11 @@ import {
   cancelQueue,
   changeQueuePriority,
   completeQueue,
+  getCancelledQueuesForToday,
+  reinstateQueue,
 } from "../services/queue.service";
 import { PrismaClient } from "../generated/prisma";
+import { emitQueueUpdate } from "../index";
 
 const prisma = new PrismaClient();
 
@@ -176,6 +179,12 @@ export async function cancelQueueById(req: Request, res: Response) {
 
     await cancelQueue(id, reason);
 
+    // إرسال إشعار WebSocket لتحديث جميع الصفحات
+    emitQueueUpdate({
+      type: "CANCELLED",
+      queueId: id,
+    });
+
     console.log(`✅ تم إلغاء الدور #${id} - السبب: ${reason}`);
 
     res.json({
@@ -213,6 +222,66 @@ export async function completeQueueById(req: Request, res: Response) {
       message: "تم إنهاء الدور بالكامل",
       completedVisit: result.completedVisit,
       queue: result.queue,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * الحصول على الأدوار الملغاة لليوم الحالي
+ * GET /api/queue/cancelled/today
+ */
+export async function getCancelledQueues(req: Request, res: Response) {
+  try {
+    const queues = await getCancelledQueuesForToday();
+
+    res.json({
+      success: true,
+      queues,
+      count: queues.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * إعادة تفعيل دور ملغى
+ * POST /api/queue/:id/reinstate
+ */
+export async function reinstateQueueById(req: Request, res: Response) {
+  try {
+    const id = parseInt(req.params.id as string);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        error: "معرف الدور غير صالح",
+      });
+    }
+
+    const result = await reinstateQueue(id);
+
+    // إرسال إشعار WebSocket لتحديث جميع الصفحات
+    emitQueueUpdate({
+      type: "REINSTATED",
+      queueId: result.newQueue.id,
+      queueNumber: result.queueNumber,
+    });
+
+    res.json({
+      success: true,
+      message: "تم إعادة تفعيل الدور بنجاح",
+      newQueue: result.newQueue,
+      queueNumber: result.queueNumber,
+      station: result.station,
     });
   } catch (error: any) {
     res.status(500).json({

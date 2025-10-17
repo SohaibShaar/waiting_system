@@ -248,6 +248,7 @@ async function getReceptionDataByQueueId(queueId: number) {
 
 /**
  * الحصول على جميع بيانات الاستقبال لليوم الحالي
+ * يتم عرض فقط البيانات المرتبطة بأدوار نشطة أو مكتملة (وليس الملغاة)
  */
 async function getTodayReceptionData() {
   const today = new Date();
@@ -261,6 +262,11 @@ async function getTodayReceptionData() {
       createdAt: {
         gte: today,
         lt: tomorrow,
+      },
+      queue: {
+        status: {
+          in: [OverallQueueStatus.ACTIVE, OverallQueueStatus.COMPLETED],
+        },
       },
     },
     include: {
