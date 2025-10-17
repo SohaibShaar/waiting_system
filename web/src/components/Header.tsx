@@ -11,7 +11,9 @@ const Header = ({ title, icon, showHomeButton = false }: HeaderProps) => {
   const navigate = useNavigate();
 
   return (
-    <header className='shado"-lg' style={{ backgroundColor: "var(--primary)" }}>
+    <header
+      className='shado"-lg z-10'
+      style={{ backgroundColor: "var(--primary)" }}>
       <div className='max-w"7xl mx-auto px-4 py-4'>
         <div className='flex items-center justify-between px-18'>
           {/* Right Side - Title */}
@@ -20,6 +22,16 @@ const Header = ({ title, icon, showHomeButton = false }: HeaderProps) => {
             <h1 className='text-"xl md:text-3xl font-bold text-white'>
               {title}
             </h1>
+            <div className='flex flex-row items-start justify-start text-md px-2'>
+              <span className='text-gray-400'>
+                {new Date().toLocaleDateString("ar-AE", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "numeric",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
           </div>
 
           {/* Left Side - Navigation */}

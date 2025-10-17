@@ -40,3 +40,53 @@
 .read-the-docs {
   color: #888;
 }
+
+/* إخفاء Scrollbar للـ Form مع الحفاظ على وظيفة Scroll */
+.form-scroll::-webkit-scrollbar {
+  width: 0px;
+  display: none;
+}
+
+.form-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scroll-behavior: smooth; /* Smooth scrolling */
+}
+
+/* Scrollbar للـ Sidebar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #988561;
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: #7a6b4e;
+}
+
+/* Firefox Scrollbar للـ Sidebar */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #988561 #f1f1f1;
+  scroll-behavior: smooth; /* Smooth scrolling */
+}
+
+/* إخفاء أسهم في WebKit (Chrome, Edge, Safari) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* إخفاء الأسهم في Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
