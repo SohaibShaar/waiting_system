@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   createBloodDrawData,
   getBloodDrawDataByQueueId,
+  generateTubeNumbersForQueue,
 } from "../services/bloodDraw.service";
 import { emitQueueUpdate, emitScreenDataUpdate } from "..";
 
@@ -11,7 +12,15 @@ import { emitQueueUpdate, emitScreenDataUpdate } from "..";
  */
 export async function addBloodDrawData(req: Request, res: Response) {
   try {
-    const { queueId, patientId, notes } = req.body;
+    const {
+      queueId,
+      patientId,
+      notes,
+      maleBloodTube1,
+      maleBloodTube2,
+      femaleBloodTube1,
+      femaleBloodTube2,
+    } = req.body;
 
     // التحقق من البيانات المطلوبة
     if (!queueId || !patientId) {
@@ -21,11 +30,15 @@ export async function addBloodDrawData(req: Request, res: Response) {
       });
     }
 
-    // إنشاء بيانات سحب الدم (بدون استدعاء تلقائي)
+    // إنشاء بيانات سحب الدم مع أرقام الأنابيب
     const result = await createBloodDrawData({
       queueId,
       patientId,
       ...(notes && { notes }),
+      ...(maleBloodTube1 && { maleBloodTube1 }),
+      ...(maleBloodTube2 && { maleBloodTube2 }),
+      ...(femaleBloodTube1 && { femaleBloodTube1 }),
+      ...(femaleBloodTube2 && { femaleBloodTube2 }),
     });
 
     // إرسال إشعارات WebSocket
@@ -78,6 +91,35 @@ export async function getBloodDrawData(req: Request, res: Response) {
     res.json({
       success: true,
       bloodDrawData,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * توليد أرقام أنابيب الدم
+ * POST /api/blood-draw/generate-tubes/:queueId
+ */
+export async function generateTubeNumbers(req: Request, res: Response) {
+  try {
+    const queueId = parseInt(req.params.queueId as string);
+
+    if (isNaN(queueId)) {
+      return res.status(400).json({
+        success: false,
+        error: "معرف الدور غير صالح",
+      });
+    }
+
+    const tubes = await generateTubeNumbersForQueue(queueId);
+
+    res.json({
+      success: true,
+      tubes,
     });
   } catch (error: any) {
     res.status(500).json({

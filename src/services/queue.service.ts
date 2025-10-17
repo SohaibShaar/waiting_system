@@ -258,10 +258,10 @@ async function completeQueue(queueId: number) {
       waitingTime,
       serviceTime,
       stationsCount: queue.history.length,
-      visitData: {
+      visitData: JSON.stringify({
         history: queue.history,
         patient: queue.patient,
-      },
+      }),
       notes: queue.notes,
     },
   });

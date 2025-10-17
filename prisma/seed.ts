@@ -17,8 +17,8 @@ async function main() {
   await prisma.patient.deleteMany({});
   await prisma.station.deleteMany({});
   await prisma.systemSettings.deleteMany({});
-  await prisma.favoritePrice.deleteMany({});
-  await prisma.fastAddValue.deleteMany({});
+  await prisma.favoriteprice.deleteMany({});
+  await prisma.fastaddvalue.deleteMany({});
   await prisma.$executeRawUnsafe(
     `ALTER TABLE queue_history AUTO_INCREMENT = 1`
   );
@@ -85,22 +85,25 @@ async function main() {
       },
     ],
   });
-  await prisma.favoritePrice.createMany({
+  await prisma.favoriteprice.createMany({
     data: [
       {
         label: "الدعوة الشرعية",
         value: 200000,
+        updatedAt: new Date(),
       },
       {
         label: "السعر",
         value: 250000,
+        updatedAt: new Date(),
       },
     ],
   });
-  await prisma.fastAddValue.createMany({
+  await prisma.fastaddvalue.createMany({
     data: [
       {
         value: 100000,
+        updatedAt: new Date(),
       },
     ],
   });

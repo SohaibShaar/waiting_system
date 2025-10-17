@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   addBloodDrawData,
   getBloodDrawData,
+  generateTubeNumbers,
 } from "../controllers/bloodDraw.controller";
 
 const router = Router();
@@ -11,6 +12,12 @@ const router = Router();
  * إضافة بيانات سحب الدم
  */
 router.post("/", addBloodDrawData);
+
+/**
+ * POST /api/blood-draw/generate-tubes/:queueId
+ * توليد أرقام أنابيب الدم
+ */
+router.post("/generate-tubes/:queueId", generateTubeNumbers);
 
 /**
  * GET /api/blood-draw/:queueId

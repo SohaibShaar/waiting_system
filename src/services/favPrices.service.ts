@@ -6,8 +6,8 @@ const prisma = new PrismaClient();
  * إضافة سعر مفضل
  */
 export async function addFavoritePrice(label: string, value: number) {
-  return await prisma.favoritePrice.create({
-    data: { label, value },
+  return await prisma.favoriteprice.create({
+    data: { label, value, updatedAt: new Date() },
   });
 }
 
@@ -15,7 +15,7 @@ export async function addFavoritePrice(label: string, value: number) {
  * حذف سعر مفضل
  */
 export async function deleteFavoritePrice(id: number) {
-  return await prisma.favoritePrice.delete({
+  return await prisma.favoriteprice.delete({
     where: { id },
   });
 }
@@ -24,7 +24,7 @@ export async function deleteFavoritePrice(id: number) {
  * الحصول على جميع سعر مفضل
  */
 export async function getFavoritePrices() {
-  return await prisma.favoritePrice.findMany();
+  return await prisma.favoriteprice.findMany();
 }
 
 /**
@@ -35,10 +35,8 @@ export async function updateFavoritePrice(
   label: string,
   value: number
 ) {
-  return await prisma.favoritePrice.update({
+  return await prisma.favoriteprice.update({
     where: { id },
     data: { label, value },
   });
 }
-
-

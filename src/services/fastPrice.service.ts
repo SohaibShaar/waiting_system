@@ -6,8 +6,8 @@ const prisma = new PrismaClient();
  * إضافة قيمة الإضافة السريعة
  */
 export async function addFastAddValue(value: number) {
-  return await prisma.fastAddValue.create({
-    data: { value },
+  return await prisma.fastaddvalue.create({
+    data: { value, updatedAt: new Date() },
   });
 }
 
@@ -15,7 +15,7 @@ export async function addFastAddValue(value: number) {
  * الحصول على قيمة الإضافة السريعة
  */
 export async function getFastAddValue() {
-  return await prisma.fastAddValue.findUnique({
+  return await prisma.fastaddvalue.findUnique({
     where: { id: 1 },
     select: { id: true, value: true },
   });
@@ -25,7 +25,7 @@ export async function getFastAddValue() {
  * تعديل قيمة الإضافة السريعة
  */
 export async function updateFastAddValue(value: string) {
-  return await prisma.fastAddValue.update({
+  return await prisma.fastaddvalue.update({
     where: { id: 1 },
     data: { value: parseInt(value) },
   });

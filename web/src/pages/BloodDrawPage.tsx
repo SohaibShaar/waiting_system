@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
+import { printLabels } from "../utils/labelPrinter";
 
 const API_URL = "http://localhost:3003/api";
 const STATION_DISPLAY_NUMBER = 4;
@@ -21,6 +22,13 @@ interface CurrentPatient {
   };
 }
 
+interface TubeNumbers {
+  maleBloodTube1?: string;
+  maleBloodTube2?: string;
+  femaleBloodTube1?: string;
+  femaleBloodTube2?: string;
+}
+
 const BloodDrawPage = () => {
   const [currentPatient, setCurrentPatient] = useState<CurrentPatient | null>(
     null
@@ -28,6 +36,7 @@ const BloodDrawPage = () => {
   const [formData, setFormData] = useState({
     notes: "",
   });
+  const [tubeNumbers, setTubeNumbers] = useState<TubeNumbers | null>(null);
   const [loading, setLoading] = useState(false);
   const [stationId, setStationId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -103,6 +112,18 @@ const BloodDrawPage = () => {
             notes: "",
           });
 
+          // توليد أرقام أنابيب الدم
+          try {
+            const tubesResponse = await axios.post(
+              `${API_URL}/blood-draw/generate-tubes/${queue.id}`
+            );
+            if (tubesResponse.data.success) {
+              setTubeNumbers(tubesResponse.data.tubes);
+            }
+          } catch (error) {
+            console.error("خطأ في توليد أرقام الأنابيب:", error);
+          }
+
           setHasBeenCalled(true);
           setIsFromSidebar(false);
           setRecallCount(0);
@@ -139,15 +160,36 @@ const BloodDrawPage = () => {
         queueId: currentPatient.queueId,
         patientId: currentPatient.patientId,
         ...formData,
+        ...(tubeNumbers && {
+          maleBloodTube1: tubeNumbers.maleBloodTube1,
+          maleBloodTube2: tubeNumbers.maleBloodTube2,
+          femaleBloodTube1: tubeNumbers.femaleBloodTube1,
+          femaleBloodTube2: tubeNumbers.femaleBloodTube2,
+        }),
       });
 
       if (response.data.success) {
         alert("✅ تم تسجيل سحب الدم بنجاح!");
+        printLabels(
+          "♂ الزوج : " +
+            currentPatient.ReceptionData?.maleName +
+            " " +
+            currentPatient.ReceptionData?.maleLastName || "",
+          tubeNumbers?.maleBloodTube1 || "",
+          tubeNumbers?.maleBloodTube2 || "",
+          "♀ الزوجة : " +
+            currentPatient.ReceptionData?.femaleName +
+            " " +
+            currentPatient.ReceptionData?.femaleLastName || "",
+          tubeNumbers?.femaleBloodTube1 || "",
+          tubeNumbers?.femaleBloodTube2 || ""
+        );
         await axios.post(`${API_URL}/stations/${stationId}/complete-service`, {
           queueId: currentPatient.queueId,
           notes: "تم سحب الدم",
         });
         setCurrentPatient(null);
+        setTubeNumbers(null);
         setRecallCount(0);
         setIsFromSidebar(false);
         setFormData({
@@ -199,6 +241,18 @@ const BloodDrawPage = () => {
           femaleName: reception?.femaleName || "",
           ReceptionData: reception,
         });
+
+        // توليد أرقام أنابيب الدم
+        try {
+          const tubesResponse = await axios.post(
+            `${API_URL}/blood-draw/generate-tubes/${fullQueue.id}`
+          );
+          if (tubesResponse.data.success) {
+            setTubeNumbers(tubesResponse.data.tubes);
+          }
+        } catch (error) {
+          console.error("خطأ في توليد أرقام الأنابيب:", error);
+        }
 
         const hasCalled =
           fullQueue.QueueHistory?.some(
@@ -286,6 +340,7 @@ const BloodDrawPage = () => {
         alert(`✅ تم إلغاء الدور #${currentPatient.queueNumber}`);
 
         setCurrentPatient(null);
+        setTubeNumbers(null);
         setRecallCount(0);
         setIsFromSidebar(false);
         setFormData({
@@ -408,6 +463,80 @@ const BloodDrawPage = () => {
                 </div>
               </div>
 
+              {/* Blood Tube Numbers */}
+              {tubeNumbers && (
+                <div
+                  className='rounded-lg p-6 mb-6'
+                  style={{
+                    backgroundColor: "rgba(59, 130, 246, 0.1)",
+                    border: "2px solid #3b82f6",
+                  }}>
+                  <h3
+                    className='text-xl font-bold mb-4 text-center'
+                    style={{ color: "var(--primary)" }}>
+                    🧪 أرقام أنابيب الدم
+                  </h3>
+                  <div className='grid grid-cols-2 gap-4'>
+                    {tubeNumbers.maleBloodTube1 && (
+                      <div className='text-center p-4 bg-white rounded-lg shadow'>
+                        <div
+                          className='text-sm mb-2'
+                          style={{ color: "var(--dark)" }}>
+                          👨 الزوج - أنبوبة 1
+                        </div>
+                        <div
+                          className='text-3xl font-bold'
+                          style={{ color: "#3b82f6" }}>
+                          {tubeNumbers.maleBloodTube1}
+                        </div>
+                      </div>
+                    )}
+                    {tubeNumbers.maleBloodTube2 && (
+                      <div className='text-center p-4 bg-white rounded-lg shadow'>
+                        <div
+                          className='text-sm mb-2'
+                          style={{ color: "var(--dark)" }}>
+                          👨 الزوج - أنبوبة 2
+                        </div>
+                        <div
+                          className='text-3xl font-bold'
+                          style={{ color: "#3b82f6" }}>
+                          {tubeNumbers.maleBloodTube2}
+                        </div>
+                      </div>
+                    )}
+                    {tubeNumbers.femaleBloodTube1 && (
+                      <div className='text-center p-4 bg-white rounded-lg shadow'>
+                        <div
+                          className='text-sm mb-2'
+                          style={{ color: "var(--dark)" }}>
+                          👩 الزوجة - أنبوبة 1
+                        </div>
+                        <div
+                          className='text-3xl font-bold'
+                          style={{ color: "#ec4899" }}>
+                          {tubeNumbers.femaleBloodTube1}
+                        </div>
+                      </div>
+                    )}
+                    {tubeNumbers.femaleBloodTube2 && (
+                      <div className='text-center p-4 bg-white rounded-lg shadow'>
+                        <div
+                          className='text-sm mb-2'
+                          style={{ color: "var(--dark)" }}>
+                          👩 الزوجة - أنبوبة 2
+                        </div>
+                        <div
+                          className='text-3xl font-bold'
+                          style={{ color: "#ec4899" }}>
+                          {tubeNumbers.femaleBloodTube2}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Form */}
               <div className='space-y-4'>
                 {/* Notes */}
@@ -470,6 +599,7 @@ const BloodDrawPage = () => {
                     <button
                       onClick={() => {
                         setCurrentPatient(null);
+                        setTubeNumbers(null);
                         setRecallCount(0);
                         setIsFromSidebar(false);
                         setFormData({
