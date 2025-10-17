@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
  * بدء تقديم الخدمة  للمراجع
  */
 async function startService(queueId: number, stationId: number) {
-  // الحصول على آخر سجل CALLED فقط
+  // الحصول على أقدم سجل CALLED فقط
   const lastCalledRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queueId,
@@ -22,7 +22,7 @@ async function startService(queueId: number, stationId: number) {
       status: QueueStatus.CALLED,
     },
     orderBy: {
-      createdAt: "desc", // الأحدث أولاً
+      createdAt: "asc", // الأقدم أولاً
     },
   });
 
@@ -57,7 +57,7 @@ async function completeStationService(
   stationId: number,
   notes?: string
 ) {
-  // 1. الحصول على آخر سجل IN_PROGRESS أو CALLED فقط
+  // 1. الحصول على أقدم سجل IN_PROGRESS أو CALLED فقط
   const lastActiveRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queueId,
@@ -67,7 +67,7 @@ async function completeStationService(
       },
     },
     orderBy: {
-      createdAt: "desc", // الأحدث أولاً
+      createdAt: "asc", // الأقدم أولاً
     },
   });
 

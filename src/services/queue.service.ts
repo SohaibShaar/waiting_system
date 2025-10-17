@@ -471,7 +471,7 @@ async function cancelQueue(queueId: number, reason?: string) {
  * تخطي مراجع (يعود لآخر القائمة)
  */
 async function skipPatient(queueId: number, stationId: number) {
-  // الحصول على آخر سجل CALLED أو IN_PROGRESS فقط
+  // الحصول على أقدم سجل CALLED أو IN_PROGRESS فقط
   const lastActiveRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queueId,
@@ -481,7 +481,7 @@ async function skipPatient(queueId: number, stationId: number) {
       },
     },
     orderBy: {
-      createdAt: "desc", // الأحدث أولاً
+      createdAt: "asc", // الأقدم أولاً
     },
   });
 

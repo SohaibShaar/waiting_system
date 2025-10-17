@@ -73,6 +73,38 @@ async function findPatient(criteria: {
  * استدعاء المراجع التالي في قائمة المحطة
  */
 async function callNextPatient(stationId: number, calledBy?: string) {
+  // 0. أولاً، تحقق من وجود مريض حالي (مستدعى أو قيد الخدمة)
+  const currentPatient = await prisma.queue.findFirst({
+    where: {
+      currentStationId: stationId,
+      status: OverallQueueStatus.ACTIVE,
+      history: {
+        some: {
+          stationId: stationId,
+          status: {
+            in: [QueueStatus.CALLED, QueueStatus.IN_PROGRESS],
+          },
+        },
+      },
+    },
+    include: {
+      patient: true,
+      currentStation: true,
+    },
+  });
+
+  // إذا كان هناك مريض حالي، أعده بدلاً من استدعاء مريض جديد
+  if (currentPatient) {
+    console.log(`📋 يوجد مريض حالي: الدور #${currentPatient.queueNumber}`);
+    return {
+      success: true,
+      queue: currentPatient,
+      displayNumber: currentPatient.currentStation.displayNumber,
+      queueNumber: currentPatient.queueNumber,
+      message: `المريض الحالي: الدور #${currentPatient.queueNumber}`,
+    };
+  }
+
   // 1. الحصول على أول مراجع في قائمة الانتظار
   const waitingList = await getStationWaitingList(stationId);
 
@@ -92,7 +124,7 @@ async function callNextPatient(stationId: number, calledBy?: string) {
     };
   }
 
-  // 2. الحصول على آخر سجل WAITING فقط
+  // 2. الحصول على أقدم سجل WAITING فقط
   const lastWaitingRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: nextQueue.id,
@@ -100,7 +132,7 @@ async function callNextPatient(stationId: number, calledBy?: string) {
       status: QueueStatus.WAITING,
     },
     orderBy: {
-      createdAt: "desc", // الأحدث أولاً
+      createdAt: "asc", // الأقدم أولاً
     },
   });
 
@@ -167,14 +199,14 @@ async function callSpecificQueue(
     };
   }
 
-  // الحصول على آخر سجل في هذه المحطة (أي حالة)
+  // الحصول على أقدم سجل في هذه المحطة (أي حالة)
   const lastRecord = await prisma.queueHistory.findFirst({
     where: {
       queueId: queue.id,
       stationId: stationId,
     },
     orderBy: {
-      createdAt: "desc", // الأحدث أولاً
+      createdAt: "asc", // الأقدم أولاً
     },
   });
 
