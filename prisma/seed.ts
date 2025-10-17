@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 async function main() {
   // حذف البيانات القديمة أولاً
   console.log("🧹 جاري تنظيف قاعدة البيانات...");
+
   await prisma.queueHistory.deleteMany({});
   await prisma.completedVisit.deleteMany({});
   await prisma.accountingData.deleteMany({});
@@ -15,7 +16,32 @@ async function main() {
   await prisma.patient.deleteMany({});
   await prisma.station.deleteMany({});
   await prisma.systemSettings.deleteMany({});
-
+  await prisma.favoritePrice.deleteMany({});
+  await prisma.fastAddValue.deleteMany({});
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE queue_history AUTO_INCREMENT = 1`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE completed_visits AUTO_INCREMENT = 1`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE accounting_data AUTO_INCREMENT = 1`
+  );
+  await prisma.$executeRawUnsafe(`ALTER TABLE lab_data AUTO_INCREMENT = 1`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE doctor_data AUTO_INCREMENT = 1`);
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE reception_data AUTO_INCREMENT = 1`
+  );
+  await prisma.$executeRawUnsafe(`ALTER TABLE queues AUTO_INCREMENT = 1`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE patients AUTO_INCREMENT = 1`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE stations AUTO_INCREMENT = 1`);
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE system_settings AUTO_INCREMENT = 1`
+  );
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE favoriteprice AUTO_INCREMENT = 1`
+  );
+  await prisma.$executeRawUnsafe(`ALTER TABLE fastaddvalue AUTO_INCREMENT = 1`);
   console.log("✅ تم تنظيف قاعدة البيانات");
 
   // إنشاء المحطات بالترتيب الصحيح
@@ -34,21 +60,46 @@ async function main() {
         order: 2,
         description: "دفع الرسوم",
       },
+
       {
-        name: "المخبر",
+        name: "الفحص الطبي",
         displayNumber: 3,
         order: 3,
-        description: "الفحوصات المخبرية",
+        description: "الفحوصات الأولية",
+      },
+      {
+        name: "سحب الدم",
+        displayNumber: 4,
+        order: 4,
+        description: "سحب الدم",
       },
       {
         name: "الدكتور",
-        displayNumber: 4,
-        order: 4,
+        displayNumber: 5,
+        order: 5,
         description: "الكشف الطبي",
       },
     ],
   });
-
+  await prisma.favoritePrice.createMany({
+    data: [
+      {
+        label: "الدعوة الشرعية",
+        value: 200000,
+      },
+      {
+        label: "السعر",
+        value: 250000,
+      },
+    ],
+  });
+  await prisma.fastAddValue.createMany({
+    data: [
+      {
+        value: 100000,
+      },
+    ],
+  });
   console.log("✅ تم إنشاء المحطات بنجاح");
 
   // إعدادات النظام

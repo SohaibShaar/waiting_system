@@ -7,6 +7,7 @@ const API_URL = "http://localhost:3003/api";
 interface QueueItem {
   id: number;
   queueNumber: number;
+  patientId: number;
   status: string;
   priority: number;
   currentStation: {
@@ -22,11 +23,14 @@ interface QueueItem {
   };
   ReceptionData?: {
     id: number;
+    patientId: number;
     maleName: string;
     maleLastName: string;
     femaleName: string;
     femaleLastName: string;
     phoneNumber?: string;
+    femaleStatus: string;
+    maleStatus: string;
   };
 }
 
@@ -40,7 +44,7 @@ interface QueueSidebarProps {
 const QueueSidebar = ({
   stationName,
   currentQueueId,
-  stationId: _stationId,
+
   onSelectQueue,
 }: QueueSidebarProps) => {
   const [queues, setQueues] = useState<QueueItem[]>([]);
@@ -105,39 +109,6 @@ const QueueSidebar = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stationName, updateTrigger]); // Refetch when WebSocket triggers update
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-      case "WAITING":
-        return "var(--secondary)";
-      case "IN_SERVICE":
-        return "var(--primary)";
-      case "COMPLETED":
-        return "#22c55e";
-      case "CANCELLED":
-        return "#ef4444";
-      default:
-        return "var(--dark)";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "نشط";
-      case "WAITING":
-        return "منتظر";
-      case "IN_SERVICE":
-        return "قيد الخدمة";
-      case "COMPLETED":
-        return "مكتمل";
-      case "CANCELLED":
-        return "ملغى";
-      default:
-        return status;
-    }
-  };
-
   // عند النقر على بطاقة المراجع
   const handleQueueClick = (queue: QueueItem) => {
     if (onSelectQueue) {
@@ -149,9 +120,14 @@ const QueueSidebar = ({
     <div
       className='h-full flex flex-col'
       style={{ backgroundColor: "var(--white)" }}>
+      {/* مساحة متطابقة مع الـ Header */}
+      <div className='px-4 py-4' style={{ backgroundColor: "var(--primary)" }}>
+        <div style={{ height: "36px" }}></div>
+      </div>
+
       {/* Header */}
       <div
-        className='p-4 font-bold text-white text-center'
+        className='p-4 font-bold text-white text-center flex-shrink-0'
         style={{ backgroundColor: "#988561" }}>
         <div className='text-lg'>📋 قائمة الانتظار</div>
         <div className='text-sm opacity-90 mt-1'>{stationName}</div>
@@ -183,18 +159,21 @@ const QueueSidebar = ({
               }}>
               {/* Queue Number */}
               <div className='flex items-center justify-between mb-2'>
-                <div
-                  className='text-2xl font-bold'
-                  style={{ color: "var(--primary)" }}>
+                <div className='text-xl bg-[#054239] text-white px-3 py-1  font-bold'>
                   #{queue.queueNumber}
                 </div>
-                <div
-                  className='text-xs px-2 py-1 rounded-full font-semibold'
-                  style={{
-                    backgroundColor: getStatusColor(queue.status),
-                    color: "var(--white)",
-                  }}>
-                  {getStatusText(queue.status)}
+                <div className='flex flex-row w-full justify-end items-end gap-1'>
+                  {queue.ReceptionData?.femaleStatus === "LEGAL_INVITATION" ||
+                  queue.ReceptionData?.maleStatus === "LEGAL_INVITATION" ? (
+                    <span className='text-[9px] px-2 py-1 rounded-full font-semibold bg-[#054239] text-white'>
+                      دعوة شرعية
+                    </span>
+                  ) : null}
+                  {queue.priority === 1 ? (
+                    <span className='text-[9px] px-2 py-1 rounded-full font-semibold bg-orange-500 text-white'>
+                      مُستعجل
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -203,13 +182,46 @@ const QueueSidebar = ({
                 <div className='space-y-1 text-sm'>
                   <div style={{ color: "var(--dark)" }}>
                     <span className='font-semibold'>👨 </span>
-                    {queue.ReceptionData.maleName}{" "}
-                    {queue.ReceptionData.maleLastName}
+                    {queue.ReceptionData.maleStatus === "LEGAL_INVITATION" ? (
+                      <>
+                        {queue.ReceptionData.maleName}{" "}
+                        {queue.ReceptionData.maleLastName}
+                      </>
+                    ) : queue.ReceptionData.maleStatus === "NOT_EXIST" ? (
+                      <span className='text-red-500'>لا يوجد زوج</span>
+                    ) : queue.ReceptionData.maleStatus === "OUT_OF_COUNTRY" ? (
+                      <span className='text-red-500'>خارج القطر</span>
+                    ) : queue.ReceptionData.maleStatus === "OUT_OF_PROVINCE" ? (
+                      <span className='text-red-500'>خارج المحافظة</span>
+                    ) : (
+                      <>
+                        {queue.ReceptionData.maleName}{" "}
+                        {queue.ReceptionData.maleLastName}
+                      </>
+                    )}
                   </div>
                   <div style={{ color: "var(--dark)" }}>
                     <span className='font-semibold'>👩 </span>
-                    {queue.ReceptionData.femaleName}{" "}
-                    {queue.ReceptionData.femaleLastName}
+                    {queue.ReceptionData.femaleStatus === "NORMAL" ||
+                    queue.ReceptionData.femaleStatus === "LEGAL_INVITATION" ? (
+                      <>
+                        {queue.ReceptionData.femaleName}{" "}
+                        {queue.ReceptionData.femaleLastName}
+                      </>
+                    ) : queue.ReceptionData.femaleStatus === "NOT_EXIST" ? (
+                      <span className='text-red-500'>لا يوجد زوجة</span>
+                    ) : queue.ReceptionData.femaleStatus ===
+                      "OUT_OF_COUNTRY" ? (
+                      <span className='text-red-500'>خارج القطر</span>
+                    ) : queue.ReceptionData.femaleStatus ===
+                      "OUT_OF_PROVINCE" ? (
+                      <span className='text-red-500'>خارج المحافظة</span>
+                    ) : (
+                      <>
+                        {queue.ReceptionData.maleName}{" "}
+                        {queue.ReceptionData.maleLastName}
+                      </>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -218,7 +230,11 @@ const QueueSidebar = ({
                 </div>
               )}
 
-              {/* Current Station */}
+              <div className='flex flex-row justify-end text-gray-400 items-end text-xs mt-2 text-center'>
+                ID : {queue.ReceptionData?.patientId}
+              </div>
+
+              {/* Current Station 
               <div
                 className='text-xs mt-2 pt-2 border-t'
                 style={{
@@ -228,12 +244,12 @@ const QueueSidebar = ({
                 {queue.currentStation?.name || "جديد"}
               </div>
 
-              {/* Click indicator */}
               <div
                 className='text-xs mt-2 text-center'
                 style={{ color: "var(--accent)" }}>
-                👆 اضغط للتفاصيل
+                اضغط للتفاصيل
               </div>
+              */}
             </div>
           ))
         )}

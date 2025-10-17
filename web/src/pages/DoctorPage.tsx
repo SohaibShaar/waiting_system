@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
@@ -45,6 +45,9 @@ const DoctorPage = () => {
   const [isFromSidebar, setIsFromSidebar] = useState(false); // هل جاء من القائمة؟
   const [hasBeenCalled, setHasBeenCalled] = useState(false); // هل تم استدعاءه؟
   const [recallCooldown, setRecallCooldown] = useState(0); // عداد الانتظار (10 ثواني)
+
+  // مرجع للتمرير إلى أعلى المحتوى
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   // WebSocket updates - handled by sidebar
 
@@ -122,6 +125,11 @@ const DoctorPage = () => {
             femaleNotes: "",
             notes: "",
           });
+
+          // تحديث الحالات بعد الاستدعاء الناجح
+          setHasBeenCalled(true);
+          setIsFromSidebar(false);
+          setRecallCount(0);
         }
       }
     } catch (error) {
@@ -207,6 +215,11 @@ const DoctorPage = () => {
       phoneNumber?: string;
     };
   }) => {
+    // التمرير إلى أعلى المحتوى
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     try {
       setLoading(true);
       const queueResponse = await axios.get(`${API_URL}/queue/${queue.id}`);
@@ -360,16 +373,19 @@ const DoctorPage = () => {
 
   return (
     <div
-      className='h-fit flex flex-col overflow-hidden'
+      className='h-screen flex flex-col'
       style={{ backgroundColor: "var(--light)" }}>
       <Header title='محطة الطبيبة - الفحص النهائي' icon='👩‍⚕️' />
 
       <div className='flex-1 flex overflow-hidden'>
         {/* Main Area */}
-        <div className='flex-1 overflow-y-auto p-6'>
+        <div
+          ref={mainContentRef}
+          className='flex-1 p-6 overflow-y-auto'
+          style={{ marginLeft: "384px" }}>
           {!currentPatient ? (
             <div className='h-full flex items-center justify-center'>
-              <div className='card max-w-2xl w-full text-center p-12'>
+              <div className='card max-w-2xl w-full text-center p-12 my-3'>
                 <div className='mb-8'>
                   <div className='text-6xl mb-4'>👩‍⚕️</div>
                   <h2
@@ -405,7 +421,7 @@ const DoctorPage = () => {
               </div>
             </div>
           ) : (
-            <div className='card h-full'>
+            <div className='card w-full p-8 my-3'>
               {/* Patient Info */}
               <div
                 className='flex flex-row items-stretch justify-evenly gap-4 rounded-lg p-6 mb-6'
@@ -646,54 +662,53 @@ const DoctorPage = () => {
                 <div className='flex flex-row gap-3 w-full items-center justify-center'>
                   <button
                     onClick={handleSave}
-                    disabled={loading}
+                    disabled={loading || !hasBeenCalled}
                     className='btn-success py-3 text-lg disabled:opacity-50'>
                     {loading ? " جاري الحفظ..." : " حفظ النهائي وإنهاء الدور"}
                   </button>
 
-                  {/* أزرار إضافية عند الاختيار من القائمة */}
-                  {isFromSidebar && (
-                    <div className='flex gap-3'>
-                      {/* زر استدعاء / إعادة نداء */}
-                      {!hasBeenCalled ? (
-                        // إذا لم يتم استدعاءه بعد → زر "استدعاء الآن"
-                        <button
-                          onClick={handleRecall}
-                          disabled={loading}
-                          className='btn-success py-3 text-lg disabled:opacity-50'
-                          style={{ backgroundColor: "var(--primary)" }}>
-                          {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
-                        </button>
-                      ) : (
-                        // إذا تم استدعاءه → زر "إعادة النداء"
-                        <button
-                          onClick={handleRecall}
-                          disabled={loading || recallCooldown > 0}
-                          className='btn-success py-3 text-lg disabled:opacity-50'
-                          style={{
-                            backgroundColor:
-                              recallCooldown > 0 ? "#9ca3af" : "var(--accent)",
-                          }}>
-                          {loading
-                            ? " جاري النداء..."
-                            : recallCooldown > 0
-                            ? ` انتظر ${recallCooldown}ث`
-                            : ` إعادة النداء (${recallCount}/3)`}
-                        </button>
-                      )}
-
+                  {/* أزرار إعادة النداء والإلغاء */}
+                  <div className='flex gap-3'>
+                    {/* زر إعادة النداء */}
+                    {hasBeenCalled && (
                       <button
-                        onClick={handleCancelQueue}
-                        disabled={loading || recallCount < 3}
-                        className='btn-danger py-3 text-lg disabled:opacity-50'
+                        onClick={handleRecall}
+                        disabled={loading || recallCooldown > 0}
+                        className='btn-success py-3 text-lg disabled:opacity-50'
                         style={{
                           backgroundColor:
-                            recallCount >= 3 ? "#dc2626" : "#9ca3af",
+                            recallCooldown > 0 ? "#9ca3af" : "var(--accent)",
                         }}>
-                        {loading ? " جاري الإلغاء..." : "لم يحضر"}
+                        {loading
+                          ? " جاري النداء..."
+                          : recallCooldown > 0
+                          ? ` انتظر ${recallCooldown}ث`
+                          : ` إعادة النداء (${recallCount}/3)`}
                       </button>
-                    </div>
-                  )}
+                    )}
+
+                    {/* زر استدعاء الآن (فقط من القائمة) */}
+                    {isFromSidebar && !hasBeenCalled && (
+                      <button
+                        onClick={handleRecall}
+                        disabled={loading}
+                        className='btn-success py-3 text-lg disabled:opacity-50'
+                        style={{ backgroundColor: "var(--primary)" }}>
+                        {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleCancelQueue}
+                      disabled={loading || recallCount < 3}
+                      className='btn-danger py-3 text-lg disabled:opacity-50'
+                      style={{
+                        backgroundColor:
+                          recallCount >= 3 ? "#dc2626" : "#9ca3af",
+                      }}>
+                      {loading ? " جاري الإلغاء..." : "لم يحضر"}
+                    </button>
+                  </div>
 
                   <button
                     onClick={() => {
@@ -721,10 +736,27 @@ const DoctorPage = () => {
               </div>
             </div>
           )}
+
+          {/* Developed By Footer */}
+          <div className='p-4 flex flex-row justify-center items-center text-center text-sm text-gray-500 gap-1'>
+            Version 1.0.0 (Beta) -
+            <a
+              href='https://wa.me/963930294306'
+              target='_blank'
+              rel='noopener noreferrer'>
+              <span className='text-gray-500'>2025 © Sohaib Shaar</span>
+            </a>
+            <span className='text-gray-500'> : Developed By </span>
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className='w-80 border-r' style={{ borderColor: "var(--light)" }}>
+        {/* Sidebar - Fixed */}
+        <div
+          className='w-96 border-r fixed left-0 h-screen flex flex-col'
+          style={{
+            borderColor: "var(--light)",
+            top: 0,
+          }}>
           <QueueSidebar
             stationName='الطبيبة'
             currentQueueId={currentPatient?.queueId}

@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import DisplayScreen from "./pages/DisplayScreen";
 import ReceptionPage from "./pages/ReceptionPage";
 import AccountingPage from "./pages/AccountingPage";
-import LabPage from "./pages/LabPage";
+import LabPage from "./pages/CheckDoctorPage";
 import DoctorPage from "./pages/DoctorPage";
 import "./App.css";
 
@@ -120,11 +120,11 @@ function HomePage() {
                 backgroundColor: "var(--white)",
                 color: "var(--dark)",
               }}>
-              <div className='text-6xl mb-4'>🔬</div>
+              <div className='text-6xl mb-4'>🩺</div>
               <h2
                 className='text-2xl font-bold mb-2'
                 style={{ color: "var(--primary)" }}>
-                المختبر
+                الفحص الطبي
               </h2>
               <p style={{ color: "var(--dark)" }}>الفحوصات الأولية</p>
             </div>

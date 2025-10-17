@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
@@ -51,6 +51,9 @@ const AccountingPage = () => {
   const [favoritePrices, setFavoritePrices] = useState<FavoritePrice[]>([]);
 
   const [fastAddValue, setFastAddValue] = useState(0);
+
+  // مرجع للتمرير إلى أعلى المحتوى
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   // جلب قيمة السعر المضاف إلى السعر الأصلي بسبب المُستعجل
   useEffect(() => {
@@ -164,6 +167,11 @@ const AccountingPage = () => {
           setAmount("");
           setIsPaid(false);
           setNotes("");
+
+          // تحديث الحالات بعد الاستدعاء الناجح
+          setHasBeenCalled(true);
+          setIsFromSidebar(false);
+          setRecallCount(0);
         }
       }
     } catch (error) {
@@ -252,6 +260,11 @@ const AccountingPage = () => {
       phoneNumber?: string;
     };
   }) => {
+    // التمرير إلى أعلى المحتوى
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     try {
       setLoading(true);
       const queueResponse = await axios.get(`${API_URL}/queue/${queue.id}`);
@@ -285,6 +298,11 @@ const AccountingPage = () => {
         setRecallCooldown(0);
         setHasBeenCalled(hasCalled);
         setErrorMessage("");
+
+        // مسح حقول الدفع
+        setAmount("");
+        setIsPaid(false);
+        setNotes("");
 
         console.log(`✅ تم اختيار الدور #${fullQueue.queueNumber}`);
         console.log(
@@ -398,48 +416,55 @@ const AccountingPage = () => {
 
   return (
     <div
-      className='h-screen flex flex-col overflow-hidden'
+      className='h-screen flex flex-col'
       style={{ backgroundColor: "var(--light)" }}>
-      <Header title='غرفة المحاسبة' icon='💰' />
+      <Header title='شباك رقم 1 | المحاسبة' icon='💰' />
 
       <div className='flex-1 flex overflow-hidden'>
         {/* Main Area */}
-        <div className='flex-1 flex items-center justify-center p-8'>
+        <div
+          ref={mainContentRef}
+          className='flex-1 p-6 overflow-y-auto'
+          style={{ marginLeft: "384px" }}>
           {!currentPatient ? (
-            <div className='card max-w-2xl w-full text-center p-12'>
-              <div className='mb-8'>
-                <div className='text-6xl mb-4'>💰</div>
-                <h2
-                  className='text-2xl font-bold mb-2'
-                  style={{ color: "var(--primary)" }}>
-                  غرفة المحاسبة
-                </h2>
-                <p className='text-sm' style={{ color: "var(--dark)" }}>
-                  اضغط على الزر لاستدعاء المراجع التالي
-                </p>
-              </div>
-              <button
-                onClick={callNextPatient}
-                disabled={loading}
-                className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
-                {loading ? "⏳ جاري الاستدعاء..." : "📢 استدعاء المراجع التالي"}
-              </button>
-
-              {/* رسالة الخطأ */}
-              {errorMessage && (
-                <div
-                  className='mt-4 p-4 rounded-lg text-center'
-                  style={{
-                    backgroundColor: "rgba(239, 68, 68, 0.1)",
-                    border: "2px solid #ef4444",
-                    color: "#dc2626",
-                  }}>
-                  <p className='text-lg font-semibold'>{errorMessage}</p>
+            <div className='h-full flex items-center justify-center'>
+              <div className='card max-w-2xl w-full text-center p-12 my-5'>
+                <div className='mb-8'>
+                  <div className='text-6xl mb-4'>💰</div>
+                  <h2
+                    className='text-2xl font-bold mb-2'
+                    style={{ color: "var(--primary)" }}>
+                    غرفة المحاسبة
+                  </h2>
+                  <p className='text-sm' style={{ color: "var(--dark)" }}>
+                    اضغط على الزر لاستدعاء المراجع التالي
+                  </p>
                 </div>
-              )}
+                <button
+                  onClick={callNextPatient}
+                  disabled={loading}
+                  className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
+                  {loading
+                    ? "⏳ جاري الاستدعاء..."
+                    : "📢 استدعاء المراجع التالي"}
+                </button>
+
+                {/* رسالة الخطأ */}
+                {errorMessage && (
+                  <div
+                    className='mt-4 p-4 rounded-lg text-center'
+                    style={{
+                      backgroundColor: "rgba(239, 68, 68, 0.1)",
+                      border: "2px solid #ef4444",
+                      color: "#dc2626",
+                    }}>
+                    <p className='text-lg font-semibold'>{errorMessage}</p>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className='card w-full p-8'>
+            <div className='card w-full p-8 my-3'>
               {/* Patient Info */}
               <div className=' text-right flex flex-row items-start justify-start py-4'>
                 <div className=''>
@@ -591,7 +616,20 @@ const AccountingPage = () => {
                         onClick={() =>
                           setAmount((price.value + fastAddValue).toString())
                         }
-                        className='text-xs px-4 py-2 bg-gray-200 text-gray-800 cursor-pointer rounded-2xl hover:bg-gray-300'>
+                        className={`text-xs px-4 py-2 bg-gray-200 text-gray-800 cursor-pointer rounded-2xl hover:bg-gray-300
+                        ${
+                          currentPatient.ReceptionData?.maleStatus ===
+                            "LEGAL_INVITATION" ||
+                          currentPatient.ReceptionData?.femaleStatus ===
+                            "LEGAL_INVITATION"
+                            ? price.id === 1
+                              ? "bg-red-200 hover:bg-red-300"
+                              : "bg-gray-200 hover:bg-gray-300"
+                            : price.id === 2
+                            ? "bg-green-200 hover:bg-green-300"
+                            : "bg-gray-200 hover:bg-gray-300"
+                        }
+                        `}>
                         {price.label} :{" "}
                         {(price.value + fastAddValue).toLocaleString()} ل.س
                       </button>
@@ -599,7 +637,18 @@ const AccountingPage = () => {
                       <button
                         key={price.id}
                         onClick={() => setAmount(price.value.toString())}
-                        className='text-xs px-4 py-2 bg-gray-200 text-gray-800 cursor-pointer rounded-2xl hover:bg-gray-300'>
+                        className={`text-xs px-4 py-2 text-gray-800 cursor-pointer rounded-2xl ${
+                          currentPatient.ReceptionData?.maleStatus ===
+                            "LEGAL_INVITATION" ||
+                          currentPatient.ReceptionData?.femaleStatus ===
+                            "LEGAL_INVITATION"
+                            ? price.id === 1
+                              ? "bg-red-200 hover:bg-red-300"
+                              : "bg-gray-200 hover:bg-gray-300"
+                            : price.id === 2
+                            ? "bg-green-200 hover:bg-green-300"
+                            : "bg-gray-200 hover:bg-gray-300"
+                        }`}>
                         {price.label} : {price.value.toLocaleString()} ل.س
                       </button>
                     )
@@ -622,6 +671,7 @@ const AccountingPage = () => {
                     ملاحظات
                   </label>
                   <textarea
+                    autoComplete='off'
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className='input-field'
@@ -635,50 +685,49 @@ const AccountingPage = () => {
                   <div className='flex flex-row gap-3 w-full items-center justify-center'>
                     <button
                       onClick={handleSave}
-                      disabled={loading || !isPaid || !amount}
+                      disabled={loading || !isPaid || !amount || !hasBeenCalled}
                       className='btn-success py-3 text-lg disabled:opacity-50'>
                       {loading ? "⏳ جاري الحفظ..." : "تأكيد الدفع"}
                     </button>
 
-                    {/* أزرار إضافية عند الاختيار من القائمة */}
-                    {isFromSidebar && (
-                      <div className='flex gap-3'>
-                        {/* زر استدعاء / إعادة نداء */}
-                        {!hasBeenCalled ? (
-                          // إذا لم يتم استدعاءه بعد → زر "استدعاء الآن"
-                          <button
-                            onClick={handleRecall}
-                            disabled={loading}
-                            className='btn-success py-3 text-lg disabled:opacity-50'
-                            style={{ backgroundColor: "var(--primary)" }}>
-                            {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
-                          </button>
-                        ) : (
-                          // إذا تم استدعاءه → زر "إعادة النداء"
-                          <button
-                            onClick={handleRecall}
-                            disabled={loading || recallCooldown > 0}
-                            className='btn-success py-3 text-lg disabled:opacity-50'>
-                            {loading
-                              ? " جاري النداء..."
-                              : recallCooldown > 0
-                              ? ` انتظر ${recallCooldown} ث`
-                              : ` إعادة النداء (${recallCount}/3)`}
-                          </button>
-                        )}
-
+                    {/* أزرار إعادة النداء والإلغاء */}
+                    <div className='flex gap-3'>
+                      {/* زر إعادة النداء */}
+                      {hasBeenCalled && (
                         <button
-                          onClick={handleCancelQueue}
-                          disabled={loading || recallCount < 3}
-                          className='btn-danger py-3 text-lg disabled:opacity-50'
-                          style={{
-                            backgroundColor:
-                              recallCount >= 3 ? "#dc2626" : "#9ca3af",
-                          }}>
-                          {loading ? "⏳ جاري الإلغاء..." : " لم يحضر"}
+                          onClick={handleRecall}
+                          disabled={loading || recallCooldown > 0}
+                          className='btn-success py-3 text-lg disabled:opacity-50'>
+                          {loading
+                            ? " جاري النداء..."
+                            : recallCooldown > 0
+                            ? ` انتظر ${recallCooldown} ث`
+                            : ` إعادة النداء (${recallCount}/3)`}
                         </button>
-                      </div>
-                    )}
+                      )}
+
+                      {/* زر استدعاء الآن (فقط من القائمة) */}
+                      {isFromSidebar && !hasBeenCalled && (
+                        <button
+                          onClick={handleRecall}
+                          disabled={loading}
+                          className='btn-success py-3 text-lg disabled:opacity-50'
+                          style={{ backgroundColor: "var(--primary)" }}>
+                          {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleCancelQueue}
+                        disabled={loading || recallCount < 3}
+                        className='btn-danger py-3 text-lg disabled:opacity-50'
+                        style={{
+                          backgroundColor:
+                            recallCount >= 3 ? "#dc2626" : "#9ca3af",
+                        }}>
+                        {loading ? "⏳ جاري الإلغاء..." : " لم يحضر"}
+                      </button>
+                    </div>
 
                     <button
                       onClick={() => {
@@ -697,10 +746,27 @@ const AccountingPage = () => {
               </div>
             </div>
           )}
+
+          {/* Developed By Footer */}
+          <div className='p-4 flex flex-row justify-center items-center text-center text-sm text-gray-500 gap-1'>
+            Version 1.0.0 (Beta) -
+            <a
+              href='https://wa.me/963930294306'
+              target='_blank'
+              rel='noopener noreferrer'>
+              <span className='text-gray-500'>2025 © Sohaib Shaar</span>
+            </a>
+            <span className='text-gray-500'> : Developed By </span>
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className='w-80 border-r' style={{ borderColor: "var(--light)" }}>
+        {/* Sidebar - Fixed */}
+        <div
+          className='w-96 border-r fixed left-0 h-screen flex flex-col'
+          style={{
+            borderColor: "var(--light)",
+            top: 0,
+          }}>
           <QueueSidebar
             stationName='المحاسبة'
             currentQueueId={currentPatient?.queueId}
