@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
+import { io } from "socket.io-client";
 
 const API_URL = "http://localhost:3003/api";
 const STATION_DISPLAY_NUMBER = 2;
@@ -13,6 +14,7 @@ interface CurrentPatient {
   patientName: string;
   maleName: string;
   femaleName: string;
+  priority: number; // إضافة الأولوية
   ReceptionData?: {
     maleName: string;
     maleLastName: string;
@@ -22,6 +24,14 @@ interface CurrentPatient {
     maleStatus: string;
     femaleStatus: string;
   };
+}
+
+interface FavoritePrice {
+  id: number;
+  label: string;
+  value: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const AccountingPage = () => {
@@ -38,6 +48,52 @@ const AccountingPage = () => {
   const [isFromSidebar, setIsFromSidebar] = useState(false); // هل جاء من القائمة؟
   const [hasBeenCalled, setHasBeenCalled] = useState(false); // هل تم استدعاءه؟
   const [recallCooldown, setRecallCooldown] = useState(0); // عداد الانتظار (10 ثواني)
+  const [favoritePrices, setFavoritePrices] = useState<FavoritePrice[]>([]);
+
+  const [fastAddValue, setFastAddValue] = useState(0);
+
+  // جلب قيمة السعر المضاف إلى السعر الأصلي بسبب المُستعجل
+  useEffect(() => {
+    const fetchFastAddValue = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/fastPrice/fast-add-value`);
+        if (response.data.success) {
+          setFastAddValue(response.data.result.value);
+        }
+      } catch (error) {
+        console.error("خطأ في جلب قيمة الإضافة السريعة:", error);
+      }
+    };
+    fetchFastAddValue();
+    // إضافة WebSocket listener للتحديثات الفورية
+    const socket = io("http://localhost:3003");
+
+    socket.on("fast-price-updated", (data: { value: number }) => {
+      console.log("✅ تم استلام تحديث FastPrice:", data.value);
+      setFastAddValue(data.value);
+    });
+
+    // تنظيف الاتصال عند إلغاء المكون
+    return () => {
+      socket.off("fast-price-updated");
+      socket.disconnect();
+    };
+  }, []);
+
+  // جلب قائمة الأسعار المفضلة
+  useEffect(() => {
+    const fetchFavoritePrices = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/favPrices`);
+        if (response.data.success) {
+          setFavoritePrices(response.data.result);
+        }
+      } catch (error) {
+        console.error("خطأ في جلب الأسعار المفضلة:", error);
+      }
+    };
+    fetchFavoritePrices();
+  }, []);
 
   // WebSocket updates - not needed here since sidebar handles it
 
@@ -101,6 +157,7 @@ const AccountingPage = () => {
             patientName: queue.patient.name,
             maleName: reception?.maleName || "",
             femaleName: reception?.femaleName || "",
+            priority: queue.priority || 0, // إضافة الأولوية
             ReceptionData: reception,
           });
 
@@ -210,6 +267,8 @@ const AccountingPage = () => {
           patientName: fullQueue.patient?.name || "",
           maleName: reception?.maleName || "",
           femaleName: reception?.femaleName || "",
+          priority: fullQueue.priority || 0, // إضافة الأولوية
+
           ReceptionData: reception,
         });
 
@@ -382,10 +441,30 @@ const AccountingPage = () => {
           ) : (
             <div className='card w-full p-8'>
               {/* Patient Info */}
+              <div className=' text-right flex flex-row items-start justify-start py-4'>
+                <div className=''>
+                  {/* عرض الأولوية */}
+                  {currentPatient.priority === 1 && (
+                    <span className='text-lg font-bold text-white bg-orange-500 rounded-lg px-2 py-1 animate-pulse'>
+                      مُستعجل
+                    </span>
+                  )}
+                </div>
+                <div className=''>
+                  {currentPatient.ReceptionData?.maleStatus ===
+                    "LEGAL_INVITATION" ||
+                  currentPatient.ReceptionData?.femaleStatus ===
+                    "LEGAL_INVITATION" ? (
+                    <span className='text-lg font-bold text-white bg-red-500 rounded-lg px-2 mx-2 py-1'>
+                      دعوة شرعية
+                    </span>
+                  ) : null}
+                </div>
+              </div>
               <div
                 className='flex flex-row items-stretch justify-evenly gap-4 rounded-lg p-6 mb-6'
                 style={{ backgroundColor: "var(--light)" }}>
-                <div className='text-center mb-4 w-[25%] h-full'>
+                <div className='text-center mb-4 w-[25%] h-full flex flex-col justify-evenly'>
                   <span className='text-sm' style={{ color: "var(--dark)" }}>
                     رقم الدور
                   </span>
@@ -394,6 +473,9 @@ const AccountingPage = () => {
                     style={{ color: "var(--primary)" }}>
                     #{currentPatient.queueNumber}
                   </div>
+                  <span className='text-sm' style={{ color: "var(--dark)" }}>
+                    ID : {currentPatient.patientId}
+                  </span>
                 </div>
 
                 <div className='grid w-full h-full grid-cols-2 gap-4 mt-4'>
@@ -451,14 +533,6 @@ const AccountingPage = () => {
                     </div>
                   </div>
                 </div>
-
-                {currentPatient.ReceptionData?.phoneNumber && (
-                  <div
-                    className='text-center mt-3 text-sm'
-                    style={{ color: "var(--dark)" }}>
-                    📱 {currentPatient.ReceptionData.phoneNumber}
-                  </div>
-                )}
               </div>
 
               {/* Payment Form */}
@@ -509,7 +583,38 @@ const AccountingPage = () => {
                     </div>
                   </div>
                 </div>
-
+                <div className='flex flex-wrap gap-2'>
+                  {favoritePrices.map((price) =>
+                    currentPatient.priority === 1 ? (
+                      <button
+                        key={price.id}
+                        onClick={() =>
+                          setAmount((price.value + fastAddValue).toString())
+                        }
+                        className='text-xs px-4 py-2 bg-gray-200 text-gray-800 cursor-pointer rounded-2xl hover:bg-gray-300'>
+                        {price.label} :{" "}
+                        {(price.value + fastAddValue).toLocaleString()} ل.س
+                      </button>
+                    ) : (
+                      <button
+                        key={price.id}
+                        onClick={() => setAmount(price.value.toString())}
+                        className='text-xs px-4 py-2 bg-gray-200 text-gray-800 cursor-pointer rounded-2xl hover:bg-gray-300'>
+                        {price.label} : {price.value.toLocaleString()} ل.س
+                      </button>
+                    )
+                  )}
+                  {currentPatient.priority === 1 ? (
+                    <span>
+                      تمت إضافة{" "}
+                      <span className='text-orange-500 text-xl font-bold'>
+                        {fastAddValue.toLocaleString()}
+                      </span>{" "}
+                      ل.س على السعر الأصلي بسبب{" "}
+                      <span className='font-bold'> المُستعجل </span>
+                    </span>
+                  ) : null}
+                </div>
                 <div>
                   <label
                     className='block text-sm font-medium mb-2'

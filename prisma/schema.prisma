@@ -297,3 +297,18 @@ model DoctorData {
   @@index([queueId])
   @@map("doctor_data")
 }
+
+model FavoritePrice {
+  id        Int      @id @default(autoincrement())
+  label     String // اسم السعر أو وصفه (مثلاً: "سعر الجملة", "السعر الخاص")
+  value     Float // القيمة الفعلية للسعر
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FastAddValue {
+  id        Int      @id @default(autoincrement())
+  value     Int      @default(0) // القيمة الفعلية للإضافة السريعة
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

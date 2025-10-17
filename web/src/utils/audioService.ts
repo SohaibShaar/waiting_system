@@ -174,7 +174,7 @@ export class AudioService {
 
       // 5. قراءة اسم المحطة
       console.log(`🗣️ قراءة: إلى ${stationName}`);
-      await this.speak(`إلى ${stationName}`);
+      await this.speak(`إلى شباك رقم${stationName}`);
 
       console.log("✅ انتهى النداء بنجاح");
     } catch (error) {

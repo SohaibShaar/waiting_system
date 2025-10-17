@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import { useQueueUpdates } from "../hooks/useQueueUpdates";
+import printQueueNumber from "../utils/queuePrinter";
 
 const API_URL = "http://localhost:3003/api";
 
@@ -35,6 +36,7 @@ interface ReceptionData {
   createdAt: string;
   queue: {
     queueNumber: number;
+    priority: number;
     patient: {
       id: number;
       name: string;
@@ -417,6 +419,11 @@ const ReceptionPage = () => {
         const response = await axios.post(`${API_URL}/reception`, dataToSend);
         if (response.data.success) {
           alert(`✅ تم إنشاء الدور #${response.data.queueNumber} بنجاح!`);
+
+          printQueueNumber(
+            response.data.queueNumber,
+            response.data.receptionData.patientId
+          );
           resetForm();
           fetchTodayPatients();
         }
@@ -498,7 +505,7 @@ const ReceptionPage = () => {
       femaleCountry: patient.femaleCountry || "",
       phoneNumber: patient.phoneNumber || "",
       notes: patient.notes || "",
-      priority: "0",
+      priority: patient.queue.priority?.toString() || "0",
     });
   };
 
@@ -553,7 +560,7 @@ const ReceptionPage = () => {
 
               {editingPatient && (
                 <span className='text-lg mr-2 text-gray-300 '>
-                  ( ID : {editingPatient?.id} )
+                  ( ID : {editingPatient?.patientId} )
                 </span>
               )}
             </div>
@@ -579,7 +586,9 @@ const ReceptionPage = () => {
                     required>
                     <option value='NORMAL'>الزوج موجود</option>
                     <option value='LEGAL_INVITATION'>دعوة شرعية</option>
-                    <option value='NOT_EXIST'>لا يوجد زوج</option>
+                    <option hidden value='NOT_EXIST'>
+                      لا يوجد زوج
+                    </option>
                     <option value='OUT_OF_COUNTRY'>خارج القطر</option>
                     <option value='OUT_OF_PROVINCE'>خارج المحافظة</option>
                   </select>
@@ -695,11 +704,14 @@ const ReceptionPage = () => {
                     required>
                     <option value='NORMAL'>الزوجة موجودة</option>
                     <option value='LEGAL_INVITATION'>دعوة شرعية</option>
-                    <option value='NOT_EXIST'>لا يوجد زوجة</option>
+                    <option hidden value='NOT_EXIST'>
+                      لا يوجد زوجة
+                    </option>
                     <option value='OUT_OF_COUNTRY'>خارج القطر</option>
                     <option value='OUT_OF_PROVINCE'>خارج المحافظة</option>
                   </select>
                 </div>
+
                 {/* إظهار الحقول فقط إذا كانت الحالة NORMAL أو LEGAL_INVITATION */}
                 {(formData.femaleStatus === "NORMAL" ||
                   formData.femaleStatus === "LEGAL_INVITATION") && (
@@ -804,6 +816,7 @@ const ReceptionPage = () => {
                   onChange={handleInputChange}
                   className='input-field text-sm py-3'
                   placeholder='رقم الهاتف'
+                  required
                 />
 
                 <textarea
@@ -816,13 +829,12 @@ const ReceptionPage = () => {
                   rows={1}
                 />
                 <select
-                  disabled
                   name='priority'
                   value={formData.priority}
                   onChange={handleInputChange}
-                  className='input-field text-sm py-3 disabled:opacity-50'>
+                  className='input-field text-sm py-3'>
                   <option value='0'>أولوية عادية</option>
-                  <option value='1'>أولوية عالية</option>
+                  <option value='1'>مُستعجل</option>
                 </select>
               </div>
 
@@ -885,7 +897,7 @@ const ReceptionPage = () => {
                       </div>
                       <div className='flex flex-row text-xs px-4 text-gray-400'>
                         <span className='text-xs px-4 text-gray-400'>
-                          ID : {patient.id}
+                          ID : {patient.patientId}
                         </span>
                         <div
                           className='text-xs'
@@ -929,13 +941,23 @@ const ReceptionPage = () => {
                           "-"
                         )}
                       </div>
-                      {patient.phoneNumber && (
-                        <div
-                          className='text-xs'
-                          style={{ color: "var(--secondary)" }}>
-                          📱 {patient.phoneNumber}
+                    </div>
+                    <div className='flex flex-row items-end justify-end w-full gap-2'>
+                      {patient.queue.priority?.toString() === "1" ? (
+                        <div>
+                          <span className='text-[10px]  bg-orange-500 text-white px-2 py-1 rounded-md'>
+                            مُستعجل
+                          </span>
                         </div>
-                      )}
+                      ) : null}
+                      {patient.maleStatus === "LEGAL_INVITATION" ||
+                      patient.femaleStatus === "LEGAL_INVITATION" ? (
+                        <div>
+                          <span className='text-[10px]  bg-[#054239] text-white px-2 py-1 rounded-md'>
+                            دعوة شرعية
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))

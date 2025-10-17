@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { PrismaClient } from "../generated/prisma";
+const prisma = new PrismaClient();
 import {
   createReceptionData,
   getReceptionDataByQueueId,
@@ -297,6 +299,19 @@ export async function updateReceptionDataController(
     };
 
     const updatedData = await updateReceptionData(queueId, dataToUpdate);
+
+    // تحديث الأولوية في جدول Queue إذا كانت موجودة
+    if (priority !== undefined && priority !== null) {
+      await prisma.queue.update({
+        where: { id: queueId },
+        data: { priority: parseInt(priority) },
+      });
+    }
+    // إرسال تحديث عبر WebSocket
+    emitQueueUpdate({
+      type: "UPDATE",
+      queueId: queueId,
+    });
 
     res.json({
       success: true,

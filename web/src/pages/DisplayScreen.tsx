@@ -23,9 +23,9 @@ const DisplayScreen = () => {
   const getStationName = useCallback((displayNumber: number) => {
     const stations: { [key: number]: string } = {
       1: "الاستقبال",
-      2: "شباك واحد",
-      3: "غرفة الطبيب",
-      4: "شباك ثلاثة",
+      2: "واحد",
+      3: "اثنان",
+      4: "ثلاثة",
     };
     return stations[displayNumber] || `الشاشة ${displayNumber}`;
   }, []);
@@ -269,7 +269,7 @@ const DisplayScreen = () => {
                   className='text-4xl font-bold mx-4'
                   style={{ color: "var(--secondary)" }}>
                   {recentCalls[0]
-                    ? getStationName(recentCalls[0].displayNumber)
+                    ? "الشباك " + getStationName(recentCalls[0].displayNumber)
                     : "بانتظار الاستدعاء"}
                 </div>
               </div>

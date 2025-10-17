@@ -59,3 +59,9 @@ export const emitScreenDataUpdate = () => {
   socketIO.emit("queue-updated", {}); // Trigger update for sidebars
   console.log("📡 Emitted screen-data-updated to display-screen");
 };
+
+export const emitFastPriceUpdate = (data: any) => {
+  const socketIO = getIO();
+  socketIO.emit("fast-price-updated", data);
+  console.log("📡 Emitted fast-price-updated to all clients:", data);
+};

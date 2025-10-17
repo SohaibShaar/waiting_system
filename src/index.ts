@@ -17,6 +17,8 @@ import accountingRoutes from "./routes/accounting.routes";
 
 // Import WebSocket functions
 import { initSocketIO } from "./websocket/socket";
+import favPricesRoutes from "./routes/favPrices.routes";
+import fastPriceRoutes from "./routes/fastPrice.routes";
 
 dotenv.config();
 
@@ -46,6 +48,8 @@ app.use("/api/reception", receptionRoutes);
 app.use("/api/lab", labRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/accounting", accountingRoutes);
+app.use("/api/favPrices", favPricesRoutes);
+app.use("/api/fastPrice", fastPriceRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {
