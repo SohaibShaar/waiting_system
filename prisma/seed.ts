@@ -10,6 +10,7 @@ async function main() {
   await prisma.completedVisit.deleteMany({});
   await prisma.accountingData.deleteMany({});
   await prisma.labData.deleteMany({});
+  await prisma.bloodDrawData.deleteMany({});
   await prisma.doctorData.deleteMany({});
   await prisma.receptionData.deleteMany({});
   await prisma.queue.deleteMany({});
@@ -28,6 +29,9 @@ async function main() {
     `ALTER TABLE accounting_data AUTO_INCREMENT = 1`
   );
   await prisma.$executeRawUnsafe(`ALTER TABLE lab_data AUTO_INCREMENT = 1`);
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE blood_draw_data AUTO_INCREMENT = 1`
+  );
   await prisma.$executeRawUnsafe(`ALTER TABLE doctor_data AUTO_INCREMENT = 1`);
   await prisma.$executeRawUnsafe(
     `ALTER TABLE reception_data AUTO_INCREMENT = 1`

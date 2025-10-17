@@ -72,6 +72,7 @@ model Patient {
   ReceptionData   ReceptionData[]
   AccountingData  AccountingData[]
   LabData         LabData[]
+  BloodDrawData   BloodDrawData[]
   DoctorData      DoctorData[]
 
   @@index([phoneNumber])
@@ -117,6 +118,7 @@ model Queue {
   ReceptionData  ReceptionData?
   AccountingData AccountingData?
   LabData        LabData?
+  BloodDrawData  BloodDrawData?
   DoctorData     DoctorData?
 
   @@unique([queueNumber, createdAt])
@@ -270,6 +272,24 @@ model LabData {
   @@index([queueId])
   @@index([doctorName])
   @@map("lab_data")
+}
+
+// 10. بيانات سحب الدم
+model BloodDrawData {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  queueId   Int      @unique
+  notes     String?  @db.Text // ملاحظات عامة
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // العلاقات
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue   Queue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@map("blood_draw_data")
 }
 
 model DoctorData {

@@ -3,6 +3,7 @@ import DisplayScreen from "./pages/DisplayScreen";
 import ReceptionPage from "./pages/ReceptionPage";
 import AccountingPage from "./pages/AccountingPage";
 import LabPage from "./pages/CheckDoctorPage";
+import BloodDrawPage from "./pages/BloodDrawPage";
 import DoctorPage from "./pages/DoctorPage";
 import "./App.css";
 
@@ -15,6 +16,7 @@ function App() {
         <Route path='/reception' element={<ReceptionPage />} />
         <Route path='/accounting' element={<AccountingPage />} />
         <Route path='/lab' element={<LabPage />} />
+        <Route path='/blood-draw' element={<BloodDrawPage />} />
         <Route path='/doctor' element={<DoctorPage />} />
       </Routes>
     </Router>
@@ -127,6 +129,26 @@ function HomePage() {
                 الفحص الطبي
               </h2>
               <p style={{ color: "var(--dark)" }}>الفحوصات الأولية</p>
+            </div>
+          </Link>
+
+          {/* Blood Draw */}
+          <Link
+            to='/blood-draw'
+            className='transform hover:scale-105 transition'>
+            <div
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>💉</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                سحب الدم
+              </h2>
+              <p style={{ color: "var(--dark)" }}>سحب عينات الدم</p>
             </div>
           </Link>
 

@@ -74,12 +74,19 @@ const QueueSidebar = ({
           } else if (stationName === "المختبر") {
             return (
               q.currentStation.name === "المختبر" ||
+              q.currentStation.name === "الفحص الطبي" ||
               q.currentStation.displayNumber === 3
+            );
+          } else if (stationName === "سحب الدم") {
+            return (
+              q.currentStation.name === "سحب الدم" ||
+              q.currentStation.displayNumber === 4
             );
           } else if (stationName === "الطبيبة") {
             return (
               q.currentStation.name === "الطبيبة" ||
-              q.currentStation.displayNumber === 4
+              q.currentStation.name === "الدكتور" ||
+              q.currentStation.displayNumber === 5
             );
           }
 

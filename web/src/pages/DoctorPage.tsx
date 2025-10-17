@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
 
 const API_URL = "http://localhost:3003/api";
-const STATION_DISPLAY_NUMBER = 4;
+const STATION_DISPLAY_NUMBER = 5;
 
 interface CurrentPatient {
   queueId: number;

@@ -12,6 +12,7 @@ import statsRoutes from "./routes/stats.routes";
 import screenRouter from "./routes/screen.routes";
 import receptionRoutes from "./routes/reception.routes";
 import labRoutes from "./routes/lab.routes";
+import bloodDrawRoutes from "./routes/bloodDraw.routes";
 import doctorRoutes from "./routes/doctor.routes";
 import accountingRoutes from "./routes/accounting.routes";
 
@@ -46,6 +47,7 @@ app.use("/api/stats", statsRoutes);
 app.use("/api/display", screenRouter);
 app.use("/api/reception", receptionRoutes);
 app.use("/api/lab", labRoutes);
+app.use("/api/blood-draw", bloodDrawRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/accounting", accountingRoutes);
 app.use("/api/favPrices", favPricesRoutes);
@@ -64,6 +66,7 @@ app.get("/", (req, res) => {
       display: "/api/display",
       reception: "/api/reception",
       lab: "/api/lab",
+      bloodDraw: "/api/blood-draw",
       doctor: "/api/doctor",
       accounting: "/api/accounting",
     },
