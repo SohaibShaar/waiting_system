@@ -46,7 +46,7 @@ export default async function printQueueNumber(queueNumber, idNumber) {
     }
 
     const printers = await qz.printers.find();
-    const printer = printers[3] || printers[0];
+    const printer = printers[2] || printers[0];
     console.log("الطابعة المستخدمة:", printer);
 
     const config = qz.configs.create(printer, { encoding: "CP864" });

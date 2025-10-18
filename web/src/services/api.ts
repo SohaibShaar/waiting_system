@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:3003/api";
+const API_BASE_URL = "http://192.168.1.100:3003/api";
 
 export interface ScreenDataItem {
   queueNumber: string;

@@ -27,8 +27,8 @@ function generateBloodTubeNumbers(
     maleStatus === SpouseStatus.NORMAL ||
     maleStatus === SpouseStatus.LEGAL_INVITATION
   ) {
-    tubes.maleBloodTube1 = `11${patientId}`;
-    tubes.maleBloodTube2 = `12${patientId}`;
+    tubes.maleBloodTube1 = `${patientId}`;
+    tubes.maleBloodTube2 = `${patientId}`;
   }
 
   // توليد أرقام الزوجة (إذا كانت موجودة)
@@ -36,8 +36,8 @@ function generateBloodTubeNumbers(
     femaleStatus === SpouseStatus.NORMAL ||
     femaleStatus === SpouseStatus.LEGAL_INVITATION
   ) {
-    tubes.femaleBloodTube1 = `21${patientId}`;
-    tubes.femaleBloodTube2 = `22${patientId}`;
+    tubes.femaleBloodTube1 = `${patientId}`;
+    tubes.femaleBloodTube2 = `${patientId}`;
   }
 
   return tubes;

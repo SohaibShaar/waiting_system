@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
 import { io } from "socket.io-client";
 
-const API_URL = "http://localhost:3003/api";
+const API_URL = "http://192.168.1.100:3003/api";
 const STATION_DISPLAY_NUMBER = 2;
 
 interface CurrentPatient {
@@ -69,7 +69,7 @@ const AccountingPage = () => {
     };
     fetchFastAddValue();
     // إضافة WebSocket listener للتحديثات الفورية
-    const socket = io("http://localhost:3003");
+    const socket = io("http://192.168.1.100:3003");
 
     socket.on("fast-price-updated", (data: { value: number }) => {
       console.log("✅ تم استلام تحديث FastPrice:", data.value);

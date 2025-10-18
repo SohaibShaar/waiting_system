@@ -59,7 +59,8 @@ export async function printLabels(
     }
 
     const printers = await qz.printers.find();
-    const printerName = printers[2];
+    await console.log(qz.printers.find());
+    const printerName = printers[0];
     const config = qz.configs.create(printerName, { encoding: "CP864" });
 
     // 👇 إنشاء ٤ لصاقات (٢ من كل نوع)

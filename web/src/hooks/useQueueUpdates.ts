@@ -13,7 +13,7 @@ export const useQueueUpdates = (onUpdate?: (update: QueueUpdate) => void) => {
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
   useEffect(() => {
-    const newSocket = io("http://localhost:3003");
+    const newSocket = io("http://192.168.1.100:3003");
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
