@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { API_URL_WITHOUT_ROUTE } from "../services/api";
 
 interface QueueUpdate {
   type: "NEW_QUEUE" | "QUEUE_CALLED" | "QUEUE_COMPLETED" | "QUEUE_UPDATED";
@@ -13,7 +14,7 @@ export const useQueueUpdates = (onUpdate?: (update: QueueUpdate) => void) => {
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
   useEffect(() => {
-    const newSocket = io("http://192.168.1.100:3003");
+    const newSocket = io(API_URL_WITHOUT_ROUTE);
     setSocket(newSocket);
 
     newSocket.on("connect", () => {

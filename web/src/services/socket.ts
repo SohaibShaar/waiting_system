@@ -1,8 +1,9 @@
 import { io, Socket } from "socket.io-client";
+import { API_URL_WITHOUT_ROUTE } from "./api";
 
 class SocketService {
   private socket: Socket | null = null;
-  private serverUrl: string = "http://192.168.1.100:3003";
+  private serverUrl: string = API_URL_WITHOUT_ROUTE;
 
   connect(): Socket {
     if (!this.socket) {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { audioService } from "../utils/audioService";
+import { API_URL_WITHOUT_ROUTE } from "../services/api";
 
 interface CalledPatient {
   queueNumber: number;
@@ -111,7 +112,7 @@ const DisplayScreen = () => {
   ]); // إضافة pendingCallsCount
 
   useEffect(() => {
-    const newSocket = io("http://192.168.1.100:3003");
+    const newSocket = io(API_URL_WITHOUT_ROUTE);
     setSocket(newSocket);
 
     newSocket.on("connect", () => {

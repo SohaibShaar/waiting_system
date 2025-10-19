@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useQueueUpdates } from "../hooks/useQueueUpdates";
-
-const API_URL = "http://192.168.1.100:3003/api";
+import { API_BASE_URL } from "../services/api";
+const API_URL = API_BASE_URL;
 
 interface QueueItem {
   id: number;
