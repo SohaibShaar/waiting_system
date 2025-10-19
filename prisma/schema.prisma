@@ -127,12 +127,14 @@ model ReceptionData {
   maleName           String?      @db.VarChar(255)
   maleLastName       String?      @db.VarChar(255)
   maleFatherName     String?      @db.VarChar(255)
+  maleMotherName     String?      @db.VarChar(255)
   maleBirthDate      DateTime?    @db.DateTime(0)
   maleNationalId     String?      @db.VarChar(255)
   maleAge            Int?
   femaleName         String?      @db.VarChar(255)
   femaleLastName     String?      @db.VarChar(255)
   femaleFatherName   String?      @db.VarChar(255)
+  femaleMotherName   String?      @db.VarChar(255)
   femaleBirthDate    DateTime?    @db.DateTime(0)
   femaleNationalId   String?      @db.VarChar(255)
   femaleAge          Int?

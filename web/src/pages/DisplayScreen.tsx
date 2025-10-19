@@ -23,9 +23,9 @@ const DisplayScreen = () => {
   const getStationName = useCallback((displayNumber: number) => {
     const stations: { [key: number]: string } = {
       1: "الاستقبال",
-      2: "واحد",
-      3: "اثنان",
-      4: "ثلاثة",
+      2: "إلى شباك واحد",
+      3: "إلى غرفة الطبيب",
+      4: "إلى غرفة سحب الدم",
     };
     return stations[displayNumber] || `الشاشة ${displayNumber}`;
   }, []);
@@ -111,7 +111,7 @@ const DisplayScreen = () => {
   ]); // إضافة pendingCallsCount
 
   useEffect(() => {
-    const newSocket = io("http://192.168.1.100:3003");
+    const newSocket = io("http://localhost:3003");
     setSocket(newSocket);
 
     newSocket.on("connect", () => {

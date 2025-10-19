@@ -22,6 +22,7 @@ export async function addReceptionData(req: Request, res: Response) {
       maleName,
       maleLastName,
       maleFatherName,
+      maleMotherName,
       maleBirthDate,
       maleNationalId,
       maleAge,
@@ -31,6 +32,7 @@ export async function addReceptionData(req: Request, res: Response) {
       femaleName,
       femaleLastName,
       femaleFatherName,
+      femaleMotherName,
       femaleBirthDate,
       femaleNationalId,
       femaleAge,
@@ -74,36 +76,50 @@ export async function addReceptionData(req: Request, res: Response) {
       }
     }
 
-    // التحقق من وجود بيانات الزوج إذا كانت حالته NORMAL أو LEGAL_INVITATION
-    if (maleStatus === "NORMAL" || maleStatus === "LEGAL_INVITATION") {
+    // التحقق من وجود بيانات الزوج إذا كانت حالته NORMAL أو LEGAL_INVITATION أو OUT_OF_COUNTRY أو OUT_OF_PROVINCE
+    if (
+      maleStatus === "NORMAL" ||
+      maleStatus === "LEGAL_INVITATION" ||
+      maleStatus === "OUT_OF_COUNTRY" ||
+      maleStatus === "OUT_OF_PROVINCE"
+    ) {
       if (
         !maleName ||
         !maleLastName ||
         !maleFatherName ||
+        !maleMotherName ||
         !maleBirthDate ||
         !maleNationalId ||
         maleAge === undefined
       ) {
         return res.status(400).json({
           success: false,
-          error: "بيانات الزوج مطلوبة عندما تكون حالته عادية أو دعوة شرعية",
+          error:
+            "بيانات الزوج مطلوبة (الاسم، اسم الأب، اسم الأم، اسم العائلة، تاريخ الميلاد، الرقم الوطني، العمر)",
         });
       }
     }
 
-    // التحقق من وجود بيانات الزوجة إذا كانت حالتها NORMAL أو LEGAL_INVITATION
-    if (femaleStatus === "NORMAL" || femaleStatus === "LEGAL_INVITATION") {
+    // التحقق من وجود بيانات الزوجة إذا كانت حالتها NORMAL أو LEGAL_INVITATION أو OUT_OF_COUNTRY أو OUT_OF_PROVINCE
+    if (
+      femaleStatus === "NORMAL" ||
+      femaleStatus === "LEGAL_INVITATION" ||
+      femaleStatus === "OUT_OF_COUNTRY" ||
+      femaleStatus === "OUT_OF_PROVINCE"
+    ) {
       if (
         !femaleName ||
         !femaleLastName ||
         !femaleFatherName ||
+        !femaleMotherName ||
         !femaleBirthDate ||
         !femaleNationalId ||
         femaleAge === undefined
       ) {
         return res.status(400).json({
           success: false,
-          error: "بيانات الزوجة مطلوبة عندما تكون حالتها عادية أو دعوة شرعية",
+          error:
+            "بيانات الزوجة مطلوبة (الاسم، اسم الأب، اسم الأم، اسم العائلة، تاريخ الميلاد، الرقم الوطني، العمر)",
         });
       }
     }
@@ -124,6 +140,9 @@ export async function addReceptionData(req: Request, res: Response) {
       }),
       ...(cleanString(maleFatherName) && {
         maleFatherName: cleanString(maleFatherName),
+      }),
+      ...(cleanString(maleMotherName) && {
+        maleMotherName: cleanString(maleMotherName),
       }),
       ...(cleanString(maleBirthDate) && {
         maleBirthDate: new Date(maleBirthDate),
@@ -149,6 +168,9 @@ export async function addReceptionData(req: Request, res: Response) {
       }),
       ...(cleanString(femaleFatherName) && {
         femaleFatherName: cleanString(femaleFatherName),
+      }),
+      ...(cleanString(femaleMotherName) && {
+        femaleMotherName: cleanString(femaleMotherName),
       }),
       ...(cleanString(femaleBirthDate) && {
         femaleBirthDate: new Date(femaleBirthDate),
@@ -202,6 +224,16 @@ export async function addReceptionData(req: Request, res: Response) {
       receptionData: result.receptionData,
     });
   } catch (error: any) {
+    // التعامل مع خطأ الرقم الوطني المكرر
+    if (error.code === "DUPLICATE_NATIONAL_ID") {
+      return res.status(409).json({
+        success: false,
+        error: "DUPLICATE_NATIONAL_ID",
+        message: "يوجد رقم وطني مكرر",
+        duplicates: error.duplicates,
+      });
+    }
+
     res.status(500).json({
       success: false,
       error: error.message,

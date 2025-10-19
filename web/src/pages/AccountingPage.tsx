@@ -3,8 +3,9 @@ import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
 import { io } from "socket.io-client";
+import { printReceipt } from "../utils/receiptPrinter";
 
-const API_URL = "http://192.168.1.100:3003/api";
+const API_URL = "http://localhost:3003/api";
 const STATION_DISPLAY_NUMBER = 2;
 
 interface CurrentPatient {
@@ -18,7 +19,15 @@ interface CurrentPatient {
   ReceptionData?: {
     maleName: string;
     maleLastName: string;
+    maleFatherName: string;
+    maleMotherName: string;
+    maleBirthDate: string;
+    maleRegistration: string;
     femaleName: string;
+    femaleFatherName: string;
+    femaleMotherName: string;
+    femaleBirthDate: string;
+    femaleRegistration: string;
     femaleLastName: string;
     phoneNumber?: string;
     maleStatus: string;
@@ -51,6 +60,8 @@ const AccountingPage = () => {
   const [favoritePrices, setFavoritePrices] = useState<FavoritePrice[]>([]);
 
   const [fastAddValue, setFastAddValue] = useState(0);
+  const [isPrinting, setIsPrinting] = useState(false); // حالة الطباعة
+  const [showPrintModal, setShowPrintModal] = useState(false); // عرض modal الطباعة
 
   // مرجع للتمرير إلى أعلى المحتوى
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -69,7 +80,7 @@ const AccountingPage = () => {
     };
     fetchFastAddValue();
     // إضافة WebSocket listener للتحديثات الفورية
-    const socket = io("http://192.c.1.100:3003");
+    const socket = io("http://localhost:3003");
 
     socket.on("fast-price-updated", (data: { value: number }) => {
       console.log("✅ تم استلام تحديث FastPrice:", data.value);
@@ -226,13 +237,8 @@ const AccountingPage = () => {
           notes: "تم الدفع",
         });
 
-        alert("✅ تم حفظ بيانات الدفع بنجاح!");
-        setCurrentPatient(null);
-        setRecallCount(0);
-        setIsFromSidebar(false);
-        setAmount("");
-        setIsPaid(false);
-        setNotes("");
+        // عرض modal السؤال عن الطباعة
+        setShowPrintModal(true);
       }
     } catch (error) {
       const err = error as {
@@ -353,6 +359,83 @@ const AccountingPage = () => {
       alert(`❌ ${errorMsg}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // التعامل مع modal الطباعة
+  const handlePrintConfirm = async () => {
+    setShowPrintModal(false);
+    await handlePrint();
+    clearPatientData();
+  };
+
+  const handlePrintCancel = () => {
+    setShowPrintModal(false);
+    clearPatientData();
+  };
+
+  const clearPatientData = () => {
+    setCurrentPatient(null);
+    setRecallCount(0);
+    setIsFromSidebar(false);
+    setAmount("");
+    setIsPaid(false);
+    setNotes("");
+  };
+
+  // طباعة الإيصال
+  const handlePrint = async () => {
+    if (!currentPatient) {
+      alert("⚠️ لا يوجد مراجع حالي");
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      alert("⚠️ الرجاء إدخال المبلغ أولاً");
+      return;
+    }
+
+    try {
+      setIsPrinting(true);
+
+      // تجهيز التاريخ والوقت
+      const now = new Date();
+      const dateString = now.toLocaleDateString("ar-US", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      });
+
+      // طباعة الإيصال
+      await printReceipt(
+        currentPatient.ReceptionData?.maleName || "-",
+        currentPatient.ReceptionData?.maleLastName || "-",
+        currentPatient.ReceptionData?.maleFatherName || "-",
+        currentPatient.ReceptionData?.maleMotherName || "-",
+        new Date(
+          currentPatient.ReceptionData?.maleBirthDate || "-"
+        ).toLocaleDateString("ar-US", {
+          year: "numeric",
+        }) || "-",
+        currentPatient.ReceptionData?.maleRegistration || "-",
+        currentPatient.ReceptionData?.femaleName || "-",
+        currentPatient.ReceptionData?.femaleLastName || "-",
+        currentPatient.ReceptionData?.femaleFatherName || "-",
+        currentPatient.ReceptionData?.femaleMotherName || "-",
+        new Date(
+          currentPatient.ReceptionData?.femaleBirthDate || "-"
+        ).toLocaleDateString("ar-US", {
+          year: "numeric",
+        }) || "-",
+        currentPatient.ReceptionData?.femaleRegistration || "-",
+        dateString
+      );
+      console.log("✅ تم إرسال الإيصال للطباعة");
+    } catch (error) {
+      console.error("❌ خطأ في طباعة الإيصال:", error);
+      alert("❌ حدث خطأ في طباعة الإيصال");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -742,6 +825,20 @@ const AccountingPage = () => {
                       خروج
                     </button>
                   </div>
+
+                  {/* زر الطباعة */}
+                  <button
+                    onClick={handlePrint}
+                    disabled={
+                      isPrinting ||
+                      !amount ||
+                      parseFloat(amount) <= 0 ||
+                      !isPaid
+                    }
+                    className=' text-[#054239] cursor-pointer rounded-lg text-lg disabled:opacity-50 disabled:cursor-not-allowed'
+                    title={!isPaid ? "يجب تأكيد استلام المبلغ أولاً" : ""}>
+                    {isPrinting ? "⏳ جاري الطباعة..." : "🖨️"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -775,6 +872,93 @@ const AccountingPage = () => {
           />
         </div>
       </div>
+
+      {/* Modal تأكيد الطباعة */}
+      {showPrintModal && (
+        <div
+          className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+          onClick={handlePrintCancel}>
+          <div
+            className='bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all'
+            onClick={(e) => e.stopPropagation()}
+            style={{ animation: "fadeIn 0.2s ease-out" }}>
+            {/* أيقونة النجاح */}
+            <div className='flex justify-center mb-6'>
+              <div
+                className='w-20 h-20 rounded-full flex items-center justify-center'
+                style={{ backgroundColor: "#dcfce7" }}>
+                <svg
+                  className='w-12 h-12'
+                  style={{ color: "#16a34a" }}
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'>
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M5 13l4 4L19 7'
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* العنوان */}
+            <h2
+              className='text-2xl font-bold text-center mb-2'
+              style={{ color: "var(--primary)" }}>
+              تم حفظ بيانات الدفع بنجاح!
+            </h2>
+
+            {/* السؤال */}
+            <p
+              className='text-center text-lg mb-8'
+              style={{ color: "var(--dark)" }}>
+              هل تريد طباعة الإيصال الآن؟
+            </p>
+
+            {/* الأزرار */}
+            <div className='flex gap-4'>
+              <button
+                onClick={handlePrintConfirm}
+                className='flex-1 bg-[#054239] text-white hover:bg-[#043329]/80 cursor-pointer rounded-lg py-4 px-6 text-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2'>
+                <svg
+                  className='w-6 h-6'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'>
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z'
+                  />
+                </svg>
+                نعم
+              </button>
+
+              <button
+                onClick={handlePrintCancel}
+                className='flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300 cursor-pointer rounded-lg py-4 px-6 text-lg font-semibold transition-colors duration-200'>
+                لا، شكراً
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 };

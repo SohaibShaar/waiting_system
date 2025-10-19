@@ -40,6 +40,7 @@ async function createReceptionData(data: {
   maleName?: string;
   maleLastName?: string;
   maleFatherName?: string;
+  maleMotherName?: string;
   maleBirthDate?: Date;
   maleNationalId?: string;
   maleAge?: number;
@@ -50,6 +51,7 @@ async function createReceptionData(data: {
   femaleName?: string;
   femaleLastName?: string;
   femaleFatherName?: string;
+  femaleMotherName?: string;
   femaleBirthDate?: Date;
   femaleNationalId?: string;
   femaleAge?: number;
@@ -61,6 +63,53 @@ async function createReceptionData(data: {
   notes?: string;
   priority?: number;
 }) {
+  // 0. فحص الرقم الوطني المكرر
+  const duplicateNationalIds: Array<{
+    nationalId: string;
+    name: string;
+    gender: string;
+  }> = [];
+
+  // فحص الرقم الوطني للزوج
+  if (data.maleNationalId) {
+    const existingMalePatient = await prisma.patient.findUnique({
+      where: { nationalId: data.maleNationalId },
+      select: { id: true, name: true, nationalId: true },
+    });
+
+    if (existingMalePatient) {
+      duplicateNationalIds.push({
+        nationalId: data.maleNationalId,
+        name: existingMalePatient.name,
+        gender: "male",
+      });
+    }
+  }
+
+  // فحص الرقم الوطني للزوجة
+  if (data.femaleNationalId) {
+    const existingFemalePatient = await prisma.patient.findUnique({
+      where: { nationalId: data.femaleNationalId },
+      select: { id: true, name: true, nationalId: true },
+    });
+
+    if (existingFemalePatient) {
+      duplicateNationalIds.push({
+        nationalId: data.femaleNationalId,
+        name: existingFemalePatient.name,
+        gender: "female",
+      });
+    }
+  }
+
+  // إذا وجدنا أرقام وطنية مكررة، نرمي خطأ خاص
+  if (duplicateNationalIds.length > 0) {
+    const error: any = new Error("DUPLICATE_NATIONAL_ID");
+    error.code = "DUPLICATE_NATIONAL_ID";
+    error.duplicates = duplicateNationalIds;
+    throw error;
+  }
+
   // 1. تحديد الاسم والرقم الوطني للمراجع بناءً على الحالة
   let patientName = "";
   let patientNationalId = "";
@@ -188,6 +237,7 @@ async function createReceptionData(data: {
       maleName: data.maleName || null,
       maleLastName: data.maleLastName || null,
       maleFatherName: data.maleFatherName || null,
+      maleMotherName: data.maleMotherName || null,
       maleBirthDate: data.maleBirthDate || null,
       maleNationalId: data.maleNationalId || null,
       maleAge: data.maleAge !== undefined ? data.maleAge : null,
@@ -198,6 +248,7 @@ async function createReceptionData(data: {
       femaleName: data.femaleName || null,
       femaleLastName: data.femaleLastName || null,
       femaleFatherName: data.femaleFatherName || null,
+      femaleMotherName: data.femaleMotherName || null,
       femaleBirthDate: data.femaleBirthDate || null,
       femaleNationalId: data.femaleNationalId || null,
       femaleAge: data.femaleAge !== undefined ? data.femaleAge : null,
@@ -293,6 +344,7 @@ async function updateReceptionData(
     maleName: string;
     maleLastName: string;
     maleFatherName: string;
+    maleMotherName: string;
     maleBirthDate: Date;
     maleNationalId: string;
     maleAge: number;
@@ -302,6 +354,7 @@ async function updateReceptionData(
     femaleName: string;
     femaleLastName: string;
     femaleFatherName: string;
+    femaleMotherName: string;
     femaleBirthDate: Date;
     femaleNationalId: string;
     femaleAge: number;

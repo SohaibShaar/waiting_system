@@ -83,8 +83,7 @@ export class AudioService {
       return arabicNumbers[num.toString()];
     }
 
-    // للأرقام الأكبر من 20
-    const numStr = num.toString();
+    // للأرقام من 21 إلى 99
     if (num < 100) {
       const tens = Math.floor(num / 10);
       const ones = num % 10;
@@ -106,7 +105,34 @@ export class AudioService {
       return `${arabicNumbers[ones.toString()]} و ${tensMap[tens.toString()]}`;
     }
 
-    // للأرقام الأكبر، نقرأ رقم رقم
+    // للأرقام من 100 إلى 999
+    if (num < 1000) {
+      const hundreds = Math.floor(num / 100);
+      const remainder = num % 100;
+
+      const hundredsMap: { [key: string]: string } = {
+        "1": "مئة",
+        "2": "مئتان",
+        "3": "ثلاثمئة",
+        "4": "أربعمئة",
+        "5": "خمسمئة",
+        "6": "ستمئة",
+        "7": "سبعمئة",
+        "8": "ثمانمئة",
+        "9": "تسعمئة",
+      };
+
+      let result = hundredsMap[hundreds.toString()];
+
+      if (remainder > 0) {
+        result += " و " + this.convertToArabicNumber(remainder);
+      }
+
+      return result;
+    }
+
+    // للأرقام 1000 فما فوق، نقرأ رقم رقم
+    const numStr = num.toString();
     return numStr
       .split("")
       .map((digit) => arabicNumbers[digit] || digit)
@@ -174,7 +200,7 @@ export class AudioService {
 
       // 5. قراءة اسم المحطة
       console.log(`🗣️ قراءة: إلى ${stationName}`);
-      await this.speak(`إلى شباك رقم${stationName}`);
+      await this.speak(`${stationName}`);
 
       console.log("✅ انتهى النداء بنجاح");
     } catch (error) {

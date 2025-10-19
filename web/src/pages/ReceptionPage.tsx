@@ -5,7 +5,7 @@ import Header from "../components/Header";
 import { useQueueUpdates } from "../hooks/useQueueUpdates";
 import printQueueNumber from "../utils/queuePrinter";
 
-const API_URL = "http://192.168.1.100:3003/api";
+const API_URL = "http://localhost:3003/api";
 
 interface ReceptionData {
   id: number;
@@ -16,6 +16,7 @@ interface ReceptionData {
   maleName?: string;
   maleLastName?: string;
   maleFatherName?: string;
+  maleMotherName?: string;
   maleBirthDate?: string;
   maleNationalId?: string;
   maleAge?: number;
@@ -25,6 +26,7 @@ interface ReceptionData {
   femaleName?: string;
   femaleLastName?: string;
   femaleFatherName?: string;
+  femaleMotherName?: string;
   femaleBirthDate?: string;
   femaleNationalId?: string;
   femaleAge?: number;
@@ -171,6 +173,7 @@ const ReceptionPage = () => {
     maleName: "",
     maleLastName: "",
     maleFatherName: "",
+    maleMotherName: "",
     maleBirthDate: "",
     maleNationalId: "",
     maleAge: "",
@@ -180,6 +183,7 @@ const ReceptionPage = () => {
     femaleName: "",
     femaleLastName: "",
     femaleFatherName: "",
+    femaleMotherName: "",
     femaleBirthDate: "",
     femaleNationalId: "",
     femaleAge: "",
@@ -202,6 +206,16 @@ const ReceptionPage = () => {
   const [showCancelledModal, setShowCancelledModal] = useState(false);
   const [cancelledQueues, setCancelledQueues] = useState<CancelledQueue[]>([]);
   const [loadingCancelled, setLoadingCancelled] = useState(false);
+
+  // Duplicate National ID Modal
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicateData, setDuplicateData] = useState<
+    Array<{
+      nationalId: string;
+      name: string;
+      gender: string;
+    }>
+  >([]);
 
   // WebSocket for real-time updates
   const { updateTrigger } = useQueueUpdates();
@@ -375,6 +389,7 @@ const ReceptionPage = () => {
           femaleName: "",
           femaleLastName: "",
           femaleFatherName: "",
+          femaleMotherName: "",
           femaleBirthDate: "",
           femaleNationalId: "",
           femaleAge: "",
@@ -382,18 +397,15 @@ const ReceptionPage = () => {
           femaleRegistration: "",
           femaleCountry: "",
         }));
-      } else if (
-        value === "NOT_EXIST" ||
-        value === "OUT_OF_COUNTRY" ||
-        value === "OUT_OF_PROVINCE"
-      ) {
-        // مسح بيانات الزوج عند اختيار حالة لا يحتاج بيانات
+      } else if (value === "NOT_EXIST") {
+        // مسح بيانات الزوج عند اختيار "لا يوجد" فقط
         setFormData((prev) => ({
           ...prev,
           [name]: value,
           maleName: "",
           maleLastName: "",
           maleFatherName: "",
+          maleMotherName: "",
           maleBirthDate: "",
           maleNationalId: "",
           maleAge: "",
@@ -415,6 +427,7 @@ const ReceptionPage = () => {
           maleName: "",
           maleLastName: "",
           maleFatherName: "",
+          maleMotherName: "",
           maleBirthDate: "",
           maleNationalId: "",
           maleAge: "",
@@ -422,18 +435,15 @@ const ReceptionPage = () => {
           maleRegistration: "",
           maleCountry: "",
         }));
-      } else if (
-        value === "NOT_EXIST" ||
-        value === "OUT_OF_COUNTRY" ||
-        value === "OUT_OF_PROVINCE"
-      ) {
-        // مسح بيانات الزوجة عند اختيار حالة لا يحتاج بيانات
+      } else if (value === "NOT_EXIST") {
+        // مسح بيانات الزوجة عند اختيار "لا يوجد" فقط
         setFormData((prev) => ({
           ...prev,
           [name]: value,
           femaleName: "",
           femaleLastName: "",
           femaleFatherName: "",
+          femaleMotherName: "",
           femaleBirthDate: "",
           femaleNationalId: "",
           femaleAge: "",
@@ -516,7 +526,8 @@ const ReceptionPage = () => {
         }
       }
     } catch (error: unknown) {
-      const errorMessage =
+      // التحقق من خطأ الرقم الوطني المكرر
+      if (
         error &&
         typeof error === "object" &&
         "response" in error &&
@@ -525,10 +536,34 @@ const ReceptionPage = () => {
         "data" in error.response &&
         error.response.data &&
         typeof error.response.data === "object" &&
-        "error" in error.response.data
-          ? String(error.response.data.error)
-          : "حدث خطأ غير متوقع";
-      alert("❌ خطأ: " + errorMessage);
+        "error" in error.response.data &&
+        error.response.data.error === "DUPLICATE_NATIONAL_ID" &&
+        "duplicates" in error.response.data
+      ) {
+        // عرض modal التحذير
+        setDuplicateData(
+          error.response.data.duplicates as Array<{
+            nationalId: string;
+            name: string;
+            gender: string;
+          }>
+        );
+        setShowDuplicateModal(true);
+      } else {
+        const errorMessage =
+          error &&
+          typeof error === "object" &&
+          "response" in error &&
+          error.response &&
+          typeof error.response === "object" &&
+          "data" in error.response &&
+          error.response.data &&
+          typeof error.response.data === "object" &&
+          "error" in error.response.data
+            ? String(error.response.data.error)
+            : "حدث خطأ غير متوقع";
+        alert("❌ خطأ: " + errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -541,6 +576,7 @@ const ReceptionPage = () => {
       maleName: "",
       maleLastName: "",
       maleFatherName: "",
+      maleMotherName: "",
       maleBirthDate: "",
       maleNationalId: "",
       maleAge: "",
@@ -550,6 +586,7 @@ const ReceptionPage = () => {
       femaleName: "",
       femaleLastName: "",
       femaleFatherName: "",
+      femaleMotherName: "",
       femaleBirthDate: "",
       femaleNationalId: "",
       femaleAge: "",
@@ -571,6 +608,7 @@ const ReceptionPage = () => {
       maleName: patient.maleName || "",
       maleLastName: patient.maleLastName || "",
       maleFatherName: patient.maleFatherName || "",
+      maleMotherName: patient.maleMotherName || "",
       maleBirthDate: patient.maleBirthDate
         ? new Date(patient.maleBirthDate).toISOString().split("T")[0]
         : "",
@@ -582,6 +620,7 @@ const ReceptionPage = () => {
       femaleName: patient.femaleName || "",
       femaleLastName: patient.femaleLastName || "",
       femaleFatherName: patient.femaleFatherName || "",
+      femaleMotherName: patient.femaleMotherName || "",
       femaleBirthDate: patient.femaleBirthDate
         ? new Date(patient.femaleBirthDate).toISOString().split("T")[0]
         : "",
@@ -690,151 +729,176 @@ const ReceptionPage = () => {
                       </select>
                     </div>
                   </div>
-                  {/* إظهار الحقول فقط إذا كانت الحالة NORMAL أو LEGAL_INVITATION */}
-                  {(formData.maleStatus === "NORMAL" ||
-                    formData.maleStatus === "LEGAL_INVITATION") && (
-                    <div className='grid grid-cols-3 gap-4'>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          الاسم الأول <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='maleName'
-                          value={formData.maleName}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='الاسم الأول'
-                          required
-                        />
+                  {/* إظهار الحقول لجميع الحالات ما عدا NOT_EXIST */}
+                  {formData.maleStatus !== "NOT_EXIST" && (
+                    <>
+                      {/* السطر الأول: الاسم الأول، اسم الأب، اسم الأم، اسم العائلة */}
+                      <div className='grid grid-cols-4 gap-4'>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            الاسم الأول <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='maleName'
+                            value={formData.maleName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='الاسم الأول'
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            اسم الأب <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='maleFatherName'
+                            value={formData.maleFatherName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='اسم الأب'
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            اسم العائلة <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='maleLastName'
+                            value={formData.maleLastName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='اسم العائلة'
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            اسم الأم <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='maleMotherName'
+                            value={formData.maleMotherName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='اسم الأم'
+                            required
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          اسم الأب <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='maleFatherName'
-                          value={formData.maleFatherName}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='اسم الأب'
-                          required
-                        />
+                      {/* السطر الثاني: باقي الحقول */}
+                      <div className='grid grid-cols-3 gap-4 mt-4'>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            تاريخ الميلاد{" "}
+                            <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='date'
+                            name='maleBirthDate'
+                            value={formData.maleBirthDate}
+                            onChange={handleInputChange}
+                            onPaste={(e) => handleDatePaste(e, "maleBirthDate")}
+                            className='input-field text-sm py-3'
+                            placeholder='تاريخ الميلاد'
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            الرقم الوطني <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='number'
+                            name='maleNationalId'
+                            value={formData.maleNationalId}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3 appearance-none'
+                            placeholder='الرقم الوطني'
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            مكان الولادة
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='maleBirthPlace'
+                            value={formData.maleBirthPlace}
+                            onChange={handleInputChange}
+                            onBlur={(e) =>
+                              handleBirthPlaceBlur(e, "maleBirthPlace")
+                            }
+                            className='input-field text-sm py-3'
+                            placeholder='مكان الولادة'
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            البلد
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='maleCountry'
+                            value={formData.maleCountry}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='البلد'
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            القيد
+                          </label>
+                          <input
+                            autoComplete='off'
+                            tabIndex={-1}
+                            type='text'
+                            name='maleRegistration'
+                            value={formData.maleRegistration}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='القيد'
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            العمر (تلقائي){" "}
+                            <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            tabIndex={-1}
+                            type='number'
+                            name='maleAge'
+                            value={formData.maleAge}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3 bg-gray-100'
+                            placeholder='العمر'
+                            readOnly
+                            required
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          اسم العائلة <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='maleLastName'
-                          value={formData.maleLastName}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='اسم العائلة'
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          تاريخ الميلاد <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='date'
-                          name='maleBirthDate'
-                          value={formData.maleBirthDate}
-                          onChange={handleInputChange}
-                          onPaste={(e) => handleDatePaste(e, "maleBirthDate")}
-                          className='input-field text-sm py-3'
-                          placeholder='تاريخ الميلاد'
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          الرقم الوطني <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='number'
-                          name='maleNationalId'
-                          value={formData.maleNationalId}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3 appearance-none'
-                          placeholder='الرقم الوطني'
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          مكان الولادة
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='maleBirthPlace'
-                          value={formData.maleBirthPlace}
-                          onChange={handleInputChange}
-                          onBlur={(e) =>
-                            handleBirthPlaceBlur(e, "maleBirthPlace")
-                          }
-                          className='input-field text-sm py-3'
-                          placeholder='مكان الولادة'
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          البلد
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='maleCountry'
-                          value={formData.maleCountry}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='البلد'
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          القيد
-                        </label>
-                        <input
-                          autoComplete='off'
-                          tabIndex={-1}
-                          type='text'
-                          name='maleRegistration'
-                          value={formData.maleRegistration}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='القيد'
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          العمر (تلقائي) <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          tabIndex={-1}
-                          type='number'
-                          name='maleAge'
-                          value={formData.maleAge}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3 bg-gray-100'
-                          placeholder='العمر'
-                          readOnly
-                          required
-                        />
-                      </div>
-                    </div>
+                    </>
                   )}
                 </div>
 
@@ -871,151 +935,177 @@ const ReceptionPage = () => {
                     </div>
                   </div>
 
-                  {/* إظهار الحقول فقط إذا كانت الحالة NORMAL أو LEGAL_INVITATION */}
-                  {(formData.femaleStatus === "NORMAL" ||
-                    formData.femaleStatus === "LEGAL_INVITATION") && (
-                    <div className='grid grid-cols-3 gap-4'>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          الاسم الأول <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='femaleName'
-                          value={formData.femaleName}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='الاسم الأول'
-                          required
-                        />
+                  {/* إظهار الحقول لجميع الحالات ما عدا NOT_EXIST */}
+                  {formData.femaleStatus !== "NOT_EXIST" && (
+                    <>
+                      {/* السطر الأول: الاسم الأول، اسم الأب، اسم الأم، اسم العائلة */}
+                      <div className='grid grid-cols-4 gap-4'>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            الاسم الأول <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='femaleName'
+                            value={formData.femaleName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='الاسم الأول'
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            اسم الأب <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='femaleFatherName'
+                            value={formData.femaleFatherName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='اسم الأب'
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            اسم العائلة <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='femaleLastName'
+                            value={formData.femaleLastName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='اسم العائلة'
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            اسم الأم <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='femaleMotherName'
+                            value={formData.femaleMotherName}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='اسم الأم'
+                            required
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          اسم الأب <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='femaleFatherName'
-                          value={formData.femaleFatherName}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='اسم الأب'
-                          required
-                        />
+                      {/* السطر الثاني: باقي الحقول */}
+                      <div className='grid grid-cols-3 gap-4 mt-4'>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            تاريخ الميلاد{" "}
+                            <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='date'
+                            name='femaleBirthDate'
+                            value={formData.femaleBirthDate}
+                            onChange={handleInputChange}
+                            onPaste={(e) =>
+                              handleDatePaste(e, "femaleBirthDate")
+                            }
+                            className='input-field text-sm py-3'
+                            placeholder='تاريخ الميلاد'
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            الرقم الوطني <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='number'
+                            name='femaleNationalId'
+                            value={formData.femaleNationalId}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3 appearance-none'
+                            placeholder='الرقم الوطني'
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            مكان الولادة
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='femaleBirthPlace'
+                            value={formData.femaleBirthPlace}
+                            onChange={handleInputChange}
+                            onBlur={(e) =>
+                              handleBirthPlaceBlur(e, "femaleBirthPlace")
+                            }
+                            className='input-field text-sm py-3'
+                            placeholder='مكان الولادة'
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            البلد
+                          </label>
+                          <input
+                            autoComplete='off'
+                            type='text'
+                            name='femaleCountry'
+                            value={formData.femaleCountry}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='البلد'
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            القيد
+                          </label>
+                          <input
+                            autoComplete='off'
+                            tabIndex={-1}
+                            type='text'
+                            name='femaleRegistration'
+                            value={formData.femaleRegistration}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3'
+                            placeholder='القيد'
+                          />
+                        </div>
+                        <div>
+                          <label className='block text-xs font-semibold mb-2 text-gray-700'>
+                            العمر (تلقائي){" "}
+                            <span className='text-red-500'>*</span>
+                          </label>
+                          <input
+                            autoComplete='off'
+                            tabIndex={-1}
+                            type='number'
+                            name='femaleAge'
+                            value={formData.femaleAge}
+                            onChange={handleInputChange}
+                            className='input-field text-sm py-3 bg-gray-100'
+                            placeholder='العمر'
+                            readOnly
+                            required
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          اسم العائلة <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='femaleLastName'
-                          value={formData.femaleLastName}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='اسم العائلة'
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          تاريخ الميلاد <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='date'
-                          name='femaleBirthDate'
-                          value={formData.femaleBirthDate}
-                          onChange={handleInputChange}
-                          onPaste={(e) => handleDatePaste(e, "femaleBirthDate")}
-                          className='input-field text-sm py-3'
-                          placeholder='تاريخ الميلاد'
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          الرقم الوطني <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='number'
-                          name='femaleNationalId'
-                          value={formData.femaleNationalId}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3 appearance-none'
-                          placeholder='الرقم الوطني'
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          مكان الولادة
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='femaleBirthPlace'
-                          value={formData.femaleBirthPlace}
-                          onChange={handleInputChange}
-                          onBlur={(e) =>
-                            handleBirthPlaceBlur(e, "femaleBirthPlace")
-                          }
-                          className='input-field text-sm py-3'
-                          placeholder='مكان الولادة'
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          البلد
-                        </label>
-                        <input
-                          autoComplete='off'
-                          type='text'
-                          name='femaleCountry'
-                          value={formData.femaleCountry}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='البلد'
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          القيد
-                        </label>
-                        <input
-                          autoComplete='off'
-                          tabIndex={-1}
-                          type='text'
-                          name='femaleRegistration'
-                          value={formData.femaleRegistration}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3'
-                          placeholder='القيد'
-                        />
-                      </div>
-                      <div>
-                        <label className='block text-xs font-semibold mb-2 text-gray-700'>
-                          العمر (تلقائي) <span className='text-red-500'>*</span>
-                        </label>
-                        <input
-                          autoComplete='off'
-                          tabIndex={-1}
-                          type='number'
-                          name='femaleAge'
-                          value={formData.femaleAge}
-                          onChange={handleInputChange}
-                          className='input-field text-sm py-3 bg-gray-100'
-                          placeholder='العمر'
-                          readOnly
-                          required
-                        />
-                      </div>
-                    </div>
+                    </>
                   )}
                 </div>
 
@@ -1311,6 +1401,83 @@ const ReceptionPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal للرقم الوطني المكرر */}
+      {showDuplicateModal && (
+        <div
+          className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+          onClick={() => setShowDuplicateModal(false)}>
+          <div
+            className='bg-white rounded-lg shadow-2xl w-11/12 max-w-2xl overflow-hidden'
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className='bg-orange-600 text-white p-4 flex items-center justify-between'>
+              <h2 className='text-xl font-bold flex items-center gap-2'>
+                ⚠️ تحذير: رقم وطني مكرر
+              </h2>
+              <button
+                onClick={() => setShowDuplicateModal(false)}
+                className='text-white hover:text-gray-200 text-2xl font-bold transition'>
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className='p-6'>
+              <div className='mb-4 text-lg text-gray-700'>
+                <p className='font-bold mb-3'>
+                  الرقم الوطني المدخل موجود مسبقاً في النظام:
+                </p>
+              </div>
+
+              <div className='space-y-3'>
+                {duplicateData.map((duplicate, index) => (
+                  <div
+                    key={index}
+                    className='border-2 border-orange-300 rounded-lg p-4 bg-orange-50'>
+                    <div className='flex items-center gap-3'>
+                      <div className='text-3xl'>
+                        {duplicate.gender === "male" ? "👨" : "👩"}
+                      </div>
+                      <div className='flex-1'>
+                        <p className='text-lg font-bold text-gray-800'>
+                          {duplicate.name}
+                        </p>
+                        <p className='text-sm text-gray-600 mt-1'>
+                          <span className='font-semibold'>الرقم الوطني: </span>
+                          <span className='font-mono bg-white px-2 py-1 rounded border border-gray-300'>
+                            {duplicate.nationalId}
+                          </span>
+                        </p>
+                        <p className='text-sm text-orange-600 mt-2'>
+                          {duplicate.gender === "male" ? "الزوج" : "الزوجة"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className='mt-6 p-4 bg-yellow-50 border border-yellow-300 rounded-lg'>
+                <p className='text-sm text-gray-700'>
+                  <span className='font-bold text-orange-600'>ملاحظة:</span>{" "}
+                  يرجى التحقق من البيانات المدخلة. إذا كان المراجع موجوداً
+                  بالفعل، يرجى عدم تكرار إدخاله.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className='bg-gray-100 p-4 flex justify-end gap-3 border-t'>
+              <button
+                onClick={() => setShowDuplicateModal(false)}
+                className='bg-orange-600 hover:bg-orange-700 text-white px-8 py-2 rounded-lg font-semibold transition duration-200'>
+                فهمت
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal للأدوار الملغاة */}
       {showCancelledModal && (
