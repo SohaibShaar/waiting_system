@@ -9,19 +9,20 @@ datasource db {
 }
 
 model Patient {
-  id              Int              @id @default(autoincrement())
-  name            String           @db.VarChar(255)
-  phoneNumber     String?          @db.VarChar(20)
-  nationalId      String?          @unique @db.VarChar(50)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  AccountingData  AccountingData[]
-  BloodDrawData   BloodDrawData[]
-  completedVisits CompletedVisit[]
-  DoctorData      DoctorData[]
-  LabData         LabData[]
-  queues          Queue[]
-  ReceptionData   ReceptionData[]
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(255)
+  phoneNumber          String?                @db.VarChar(20)
+  nationalId           String?                @unique @db.VarChar(50)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  AccountingData       AccountingData[]
+  BloodDrawData        BloodDrawData[]
+  completedVisits      CompletedVisit[]
+  DoctorData           DoctorData[]
+  LabData              LabData[]
+  queues               Queue[]
+  ReceptionData        ReceptionData[]
+  CompletedPatientData CompletedPatientData[]
 
   @@index([phoneNumber])
   @@index([nationalId])
@@ -219,24 +220,51 @@ model BloodDrawData {
 }
 
 model DoctorData {
-  id              Int            @id @default(autoincrement())
-  patientId       Int
-  queueId         Int            @unique
-  maleBloodType   String?        @db.VarChar(255)
-  femaleBloodType String?        @db.VarChar(255)
-  maleHIVstatus   DiseasesStatus @default(NEGATIVE)
-  femaleHIVstatus DiseasesStatus @default(NEGATIVE)
-  maleHBSstatus   DiseasesStatus @default(NEGATIVE)
-  femaleHBSstatus DiseasesStatus @default(NEGATIVE)
-  maleHBCstatus   DiseasesStatus @default(NEGATIVE)
-  femaleHBCstatus DiseasesStatus @default(NEGATIVE)
-  maleNotes       String?        @db.Text
-  femaleNotes     String?        @db.Text
-  notes           String?        @db.Text
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  queue           Queue          @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  id                      Int            @id @default(autoincrement())
+  patientId               Int
+  queueId                 Int            @unique
+  maleBloodType           String?        @db.VarChar(255)
+  femaleBloodType         String?        @db.VarChar(255)
+  maleHIVstatus           DiseasesStatus @default(NEGATIVE)
+  femaleHIVstatus         DiseasesStatus @default(NEGATIVE)
+  maleHBSstatus           DiseasesStatus @default(NEGATIVE)
+  femaleHBSstatus         DiseasesStatus @default(NEGATIVE)
+  maleHBCstatus           DiseasesStatus @default(NEGATIVE)
+  femaleHBCstatus         DiseasesStatus @default(NEGATIVE)
+  // حقول القيم الرقمية للفحوصات الإيجابية
+  maleHIVvalue            String?        @db.VarChar(255)
+  femaleHIVvalue          String?        @db.VarChar(255)
+  maleHBSvalue            String?        @db.VarChar(255)
+  femaleHBSvalue          String?        @db.VarChar(255)
+  maleHBCvalue            String?        @db.VarChar(255)
+  femaleHBCvalue          String?        @db.VarChar(255)
+  // حقول الخضاب الشاذة للزوج
+  maleHemoglobinEnabled   Boolean        @default(false)
+  maleHbS                 String?        @db.VarChar(255)
+  maleHbF                 String?        @db.VarChar(255)
+  maleHbA1c               String?        @db.VarChar(255)
+  maleHbA2                String?        @db.VarChar(255)
+  maleHbSc                String?        @db.VarChar(255)
+  maleHbD                 String?        @db.VarChar(255)
+  maleHbE                 String?        @db.VarChar(255)
+  maleHbC                 String?        @db.VarChar(255)
+  // حقول الخضاب الشاذة للزوجة
+  femaleHemoglobinEnabled Boolean        @default(false)
+  femaleHbS               String?        @db.VarChar(255)
+  femaleHbF               String?        @db.VarChar(255)
+  femaleHbA1c             String?        @db.VarChar(255)
+  femaleHbA2              String?        @db.VarChar(255)
+  femaleHbSc              String?        @db.VarChar(255)
+  femaleHbD               String?        @db.VarChar(255)
+  femaleHbE               String?        @db.VarChar(255)
+  femaleHbC               String?        @db.VarChar(255)
+  maleNotes               String?        @db.Text
+  femaleNotes             String?        @db.Text
+  notes                   String?        @db.Text
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  patient                 Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue                   Queue          @relation(fields: [queueId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
   @@index([queueId])
@@ -256,6 +284,23 @@ model favoriteprice {
   value     Float
   createdAt DateTime @default(now())
   updatedAt DateTime
+}
+
+model CompletedPatientData {
+  id             Int      @id @default(autoincrement())
+  queueId        Int      @unique
+  patientId      Int
+  receptionData  String?  @db.LongText
+  accountingData String?  @db.LongText
+  bloodDrawData  String?  @db.LongText
+  labData        String?  @db.LongText
+  doctorData     String?  @db.LongText
+  completedAt    DateTime @default(now())
+  patient        Patient  @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([queueId])
+  @@map("completed_patient_data")
 }
 
 enum QueueStatus {

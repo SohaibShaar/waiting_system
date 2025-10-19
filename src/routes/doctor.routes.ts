@@ -3,6 +3,8 @@ import {
   addDoctorData,
   getDoctorData,
   updateDoctorDataController,
+  getCompletedData,
+  getCompletedDataById,
 } from "../controllers/doctor.controller";
 
 const router = Router();
@@ -12,6 +14,18 @@ const router = Router();
  * إضافة بيانات الطبيب مع الاستدعاء التلقائي للتالي
  */
 router.post("/", addDoctorData);
+
+/**
+ * GET /api/doctor/completed
+ * الحصول على جميع البيانات المكتملة
+ */
+router.get("/completed", getCompletedData);
+
+/**
+ * GET /api/doctor/completed/:id
+ * الحصول على البيانات المكتملة لمريض معين
+ */
+router.get("/completed/:id", getCompletedDataById);
 
 /**
  * GET /api/doctor/:queueId

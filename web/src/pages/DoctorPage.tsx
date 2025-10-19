@@ -34,17 +34,52 @@ const DoctorPage = () => {
     femaleHBSstatus: "NEGATIVE",
     maleHBCstatus: "NEGATIVE",
     femaleHBCstatus: "NEGATIVE",
+    maleHIVvalue: "",
+    femaleHIVvalue: "",
+    maleHBSvalue: "",
+    femaleHBSvalue: "",
+    maleHBCvalue: "",
+    femaleHBCvalue: "",
+    maleHemoglobinEnabled: false,
+    maleHbS: "",
+    maleHbF: "",
+    maleHbA1c: "",
+    maleHbA2: "",
+    maleHbSc: "",
+    maleHbD: "",
+    maleHbE: "",
+    maleHbC: "",
+    femaleHemoglobinEnabled: false,
+    femaleHbS: "",
+    femaleHbF: "",
+    femaleHbA1c: "",
+    femaleHbA2: "",
+    femaleHbSc: "",
+    femaleHbD: "",
+    femaleHbE: "",
+    femaleHbC: "",
     maleNotes: "",
     femaleNotes: "",
     notes: "",
   });
   const [loading, setLoading] = useState(false);
   const [stationId, setStationId] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [recallCount, setRecallCount] = useState(0); // عداد إعادة النداء
-  const [isFromSidebar, setIsFromSidebar] = useState(false); // هل جاء من القائمة؟
-  const [hasBeenCalled, setHasBeenCalled] = useState(false); // هل تم استدعاءه؟
-  const [recallCooldown, setRecallCooldown] = useState(0); // عداد الانتظار (10 ثواني)
+  const [showCompletedList, setShowCompletedList] = useState(false); // عرض قائمة البيانات المكتملة
+  const [completedData, setCompletedData] = useState<
+    Array<{
+      id: number;
+      queueId: number;
+      completedAt: string;
+      patient?: { id: number; name: string };
+      ReceptionData?: {
+        maleName: string;
+        maleLastName: string;
+        femaleName: string;
+        femaleLastName: string;
+        phoneNumber?: string;
+      };
+    }>
+  >([]); // البيانات المكتملة
 
   // مرجع للتمرير إلى أعلى المحتوى
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -71,95 +106,21 @@ const DoctorPage = () => {
     fetchStationId();
   }, []);
 
-  // عداد تنازلي لـ 10 ثواني بعد إعادة النداء
-  useEffect(() => {
-    if (recallCooldown > 0) {
-      const timer = setTimeout(() => {
-        setRecallCooldown(recallCooldown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [recallCooldown]);
-
-  const callNextPatient = async () => {
-    if (!stationId) {
-      setErrorMessage("⚠️ جاري تحميل بيانات المحطة...");
-      return;
-    }
-    try {
-      setLoading(true);
-      setErrorMessage(""); // مسح أي رسالة خطأ سابقة
-
-      const response = await axios.post(
-        `${API_URL}/stations/${stationId}/call-next`,
-        { calledBy: "الطبيبة" }
-      );
-
-      if (response.data.success) {
-        const queueResponse = await axios.get(
-          `${API_URL}/queue/${response.data.queue.id}`
-        );
-
-        if (queueResponse.data.success) {
-          const queue = queueResponse.data.queue;
-          const reception = queue.ReceptionData;
-          setCurrentPatient({
-            queueId: queue.id,
-            queueNumber: queue.queueNumber,
-            patientId: queue.patientId,
-            maleName: reception?.maleName || "",
-            femaleName: reception?.femaleName || "",
-            ReceptionData: queue.ReceptionData,
-          });
-
-          setFormData({
-            maleBloodType: "",
-            femaleBloodType: "",
-            maleHIVstatus: "NEGATIVE",
-            femaleHIVstatus: "NEGATIVE",
-            maleHBSstatus: "NEGATIVE",
-            femaleHBSstatus: "NEGATIVE",
-            maleHBCstatus: "NEGATIVE",
-            femaleHBCstatus: "NEGATIVE",
-            maleNotes: "",
-            femaleNotes: "",
-            notes: "",
-          });
-
-          // تحديث الحالات بعد الاستدعاء الناجح
-          setHasBeenCalled(true);
-          setIsFromSidebar(false);
-          setRecallCount(0);
-        }
-      }
-    } catch (error) {
-      const err = error as {
-        response?: { data?: { error?: string; message?: string } };
-        message?: string;
-      };
-
-      // عرض رسالة الخطأ أسفل الزر بدلاً من alert
-      const errorMsg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
-        "حدث خطأ";
-      setErrorMessage(errorMsg);
-
-      console.error("خطأ في استدعاء المراجع :", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSave = async () => {
     if (!currentPatient) {
       alert("⚠️ لا يوجد مراجع حالي");
       return;
     }
 
+    if (!stationId) {
+      alert("⚠️ خطأ: لم يتم تحديد المحطة");
+      return;
+    }
+
     try {
       setLoading(true);
+
+      // حفظ البيانات الطبية
       const response = await axios.post(`${API_URL}/doctor`, {
         queueId: currentPatient.queueId,
         patientId: currentPatient.patientId,
@@ -167,14 +128,21 @@ const DoctorPage = () => {
       });
 
       if (response.data.success) {
+        // إنهاء الخدمة في المحطة
+        try {
+          await axios.post(
+            `${API_URL}/stations/${stationId}/complete-service`,
+            {
+              queueId: currentPatient.queueId,
+              notes: "تم الفحص النهائي",
+            }
+          );
+        } catch (stationError) {
+          console.log("ملاحظة: الدور قد يكون منتهي بالفعل", stationError);
+        }
+
         alert("✅ تم حفظ البيانات الطبية النهائية بنجاح!");
-        await axios.post(`${API_URL}/stations/${stationId}/complete-service`, {
-          queueId: currentPatient.queueId,
-          notes: "تم الفحص النهائي",
-        });
         setCurrentPatient(null);
-        setRecallCount(0);
-        setIsFromSidebar(false);
         setFormData({
           maleBloodType: "",
           femaleBloodType: "",
@@ -184,6 +152,30 @@ const DoctorPage = () => {
           femaleHBSstatus: "NEGATIVE",
           maleHBCstatus: "NEGATIVE",
           femaleHBCstatus: "NEGATIVE",
+          maleHIVvalue: "",
+          femaleHIVvalue: "",
+          maleHBSvalue: "",
+          femaleHBSvalue: "",
+          maleHBCvalue: "",
+          femaleHBCvalue: "",
+          maleHemoglobinEnabled: false,
+          maleHbS: "",
+          maleHbF: "",
+          maleHbA1c: "",
+          maleHbA2: "",
+          maleHbSc: "",
+          maleHbD: "",
+          maleHbE: "",
+          maleHbC: "",
+          femaleHemoglobinEnabled: false,
+          femaleHbS: "",
+          femaleHbF: "",
+          femaleHbA1c: "",
+          femaleHbA2: "",
+          femaleHbSc: "",
+          femaleHbD: "",
+          femaleHbE: "",
+          femaleHbC: "",
           maleNotes: "",
           femaleNotes: "",
           notes: "",
@@ -237,139 +229,33 @@ const DoctorPage = () => {
           ReceptionData: reception,
         });
 
-        // فحص إذا كان الدور قد تم استدعاءه (status = CALLED أو IN_PROGRESS)
-        const hasCalled =
-          fullQueue.QueueHistory?.some(
-            (h: { stationId: number; status: string }) =>
-              h.stationId === stationId &&
-              (h.status === "CALLED" || h.status === "IN_PROGRESS")
-          ) || false;
-
-        setIsFromSidebar(true);
-        setRecallCount(0);
-        setRecallCooldown(0);
-        setHasBeenCalled(hasCalled);
-        setErrorMessage("");
-
         console.log(`✅ تم اختيار الدور #${fullQueue.queueNumber}`);
-        console.log(
-          `📞 حالة الاستدعاء: ${
-            hasCalled ? "تم استدعاءه" : "لم يتم استدعاءه بعد"
-          }`
-        );
       }
     } catch (error) {
       console.error("خطأ في جلب بيانات الدور:", error);
-      setErrorMessage("❌ حدث خطأ في جلب بيانات الدور");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // إعادة النداء
-  const handleRecall = async () => {
-    if (!currentPatient || !stationId) return;
-
-    try {
-      setLoading(true);
-      const response = await axios.post(
-        `${API_URL}/stations/${stationId}/call-specific`,
-        {
-          queueNumber: currentPatient.queueNumber,
-          calledBy: "الطبيبة (إعادة نداء)",
-        }
-      );
-
-      if (response.data.success) {
-        setRecallCount((prev) => prev + 1);
-        setRecallCooldown(10); // بدء العداد التنازلي 10 ثواني
-        setHasBeenCalled(true); // الآن تم استدعاءه بالتأكيد
-        alert(`✅ تم إعادة النداء (المحاولة ${recallCount + 1}/3)`);
-        console.log("⏳ بدء العداد التنازلي 10 ثواني...");
-      }
-    } catch (error) {
-      const err = error as {
-        response?: { data?: { message?: string; error?: string } };
-        message?: string;
-      };
-      const errorMsg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
-        "حدث خطأ في إعادة النداء";
-      alert(`❌ ${errorMsg}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // إلغاء الدور (لم يحضر)
-  const handleCancelQueue = async () => {
-    if (!currentPatient) return;
-
-    if (recallCount < 3) {
-      alert(
-        `⚠️ يجب إعادة النداء 3 مرات قبل الإلغاء (حالياً: ${recallCount}/3)`
-      );
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `هل أنت متأكد من إلغاء الدور #${currentPatient.queueNumber}؟\n(المراجع لم يحضر بعد 3 محاولات)`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await axios.delete(
-        `${API_URL}/queue/${currentPatient.queueId}/cancel`
-      );
-
-      if (response.data.success) {
-        alert(`✅ تم إلغاء الدور #${currentPatient.queueNumber}`);
-
-        setCurrentPatient(null);
-        setRecallCount(0);
-        setIsFromSidebar(false);
-        setFormData({
-          maleBloodType: "",
-          femaleBloodType: "",
-          maleHIVstatus: "NEGATIVE",
-          femaleHIVstatus: "NEGATIVE",
-          maleHBSstatus: "NEGATIVE",
-          femaleHBSstatus: "NEGATIVE",
-          maleHBCstatus: "NEGATIVE",
-          femaleHBCstatus: "NEGATIVE",
-          maleNotes: "",
-          femaleNotes: "",
-          notes: "",
-        });
-
-        console.log("🔄 تحديث الصفحة بعد الإلغاء...");
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      }
-    } catch (error) {
-      const err = error as {
-        response?: { data?: { message?: string; error?: string } };
-        message?: string;
-      };
-      const errorMsg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
-        "حدث خطأ في إلغاء الدور";
-      alert(`❌ ${errorMsg}`);
     } finally {
       setLoading(false);
     }
   };
 
   const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+  // تحميل قائمة البيانات المكتملة
+  const loadCompletedData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/doctor/completed`);
+      if (response.data.success) {
+        setCompletedData(response.data.data);
+        setShowCompletedList(true);
+      }
+    } catch (error) {
+      console.error("خطأ في تحميل البيانات المكتملة:", error);
+      alert("❌ حدث خطأ في تحميل البيانات");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -383,7 +269,7 @@ const DoctorPage = () => {
           ref={mainContentRef}
           className='flex-1 p-6 overflow-y-auto'
           style={{ marginLeft: "384px" }}>
-          {!currentPatient ? (
+          {!currentPatient && !showCompletedList ? (
             <div className='h-full flex items-center justify-center'>
               <div className='card max-w-2xl w-full text-center p-12 my-3'>
                 <div className='mb-8'>
@@ -396,31 +282,93 @@ const DoctorPage = () => {
                   <p className='text-sm' style={{ color: "var(--dark)" }}>
                     الفحص الطبي النهائي
                   </p>
+                  <p className='text-sm mt-4' style={{ color: "var(--dark)" }}>
+                    اختر مريضاً من القائمة الجانبية للبدء
+                  </p>
                 </div>
                 <button
-                  onClick={callNextPatient}
+                  onClick={loadCompletedData}
                   disabled={loading}
-                  className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
+                  className='btn-primary px-8 py-3 text-lg disabled:opacity-50'
+                  style={{ backgroundColor: "var(--accent)" }}>
                   {loading
-                    ? "⏳ جاري الاستدعاء..."
-                    : "📢 استدعاء المراجع التالي"}
+                    ? "⏳ جاري التحميل..."
+                    : "📋 عرض قائمة الحالات المكتملة"}
                 </button>
-
-                {/* رسالة الخطأ */}
-                {errorMessage && (
-                  <div
-                    className='mt-4 p-4 rounded-lg text-center'
-                    style={{
-                      backgroundColor: "rgba(239, 68, 68, 0.1)",
-                      border: "2px solid #ef4444",
-                      color: "#dc2626",
-                    }}>
-                    <p className='text-lg font-semibold'>{errorMessage}</p>
-                  </div>
-                )}
               </div>
             </div>
-          ) : (
+          ) : showCompletedList ? (
+            <div className='card w-full p-8 my-3'>
+              <div className='flex justify-between items-center mb-6'>
+                <h2
+                  className='text-2xl font-bold'
+                  style={{ color: "var(--primary)" }}>
+                  📋 قائمة الحالات المكتملة
+                </h2>
+                <button
+                  onClick={() => setShowCompletedList(false)}
+                  className='bg-gray-500 text-white hover:opacity-80 cursor-pointer rounded-lg py-2 px-6'>
+                  ❌ إغلاق
+                </button>
+              </div>
+
+              {completedData.length === 0 ? (
+                <div className='text-center py-12'>
+                  <p className='text-lg' style={{ color: "var(--dark)" }}>
+                    لا توجد حالات مكتملة بعد
+                  </p>
+                </div>
+              ) : (
+                <div className='overflow-y-auto max-h-[calc(100vh-300px)]'>
+                  <table className='w-full'>
+                    <thead>
+                      <tr style={{ backgroundColor: "var(--light)" }}>
+                        <th className='p-3 text-right'>رقم الدور</th>
+                        <th className='p-3 text-right'>رقم الـ ID</th>
+                        <th className='p-3 text-right'>اسم الخطيب</th>
+                        <th className='p-3 text-right'>اسم الخطيبة</th>
+                        <th className='p-3 text-right'>تاريخ الإكمال</th>
+                        <th className='p-3 text-center'>إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completedData.map((item) => (
+                        <tr key={item.id} className='border-b hover:bg-gray-50'>
+                          <td className='p-3'>#{item.queueId}</td>
+                          <td className='p-3'>
+                            {item.patient?.id.toString() || "غير متوفر"}
+                          </td>
+                          <td className='p-3'>
+                            {item.ReceptionData?.maleName || "غير متوفر"}{" "}
+                            {item.ReceptionData?.maleLastName || "غير متوفر"}
+                          </td>
+                          <td className='p-3'>
+                            {item.ReceptionData?.femaleName || "غير متوفر"}{" "}
+                            {item.ReceptionData?.femaleLastName || "غير متوفر"}
+                          </td>
+                          <td className='p-3'>
+                            {new Date(item.completedAt).toLocaleDateString(
+                              "ar-SY"
+                            )}
+                          </td>
+                          <td className='p-3 text-center'>
+                            <button
+                              onClick={() => {
+                                // سيتم تخصيص الطباعة لاحقاً
+                                alert("سيتم تخصيص وظيفة الطباعة لاحقاً");
+                              }}
+                              className='btn-primary px-4 py-2 text-sm'>
+                              🖨️ طباعة
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : currentPatient ? (
             <div className='card w-full p-8 my-3'>
               {/* Patient Info */}
               <div
@@ -497,51 +445,120 @@ const DoctorPage = () => {
                   </select>
 
                   <div className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-lg font-bold w-16'>HIV:</span>
-                      <select
-                        value={formData.maleHIVstatus}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            maleHIVstatus: e.target.value,
-                          })
-                        }
-                        className='input-field text-sm py-1 flex-1'>
-                        <option value='NEGATIVE'>سلبي</option>
-                        <option value='POSITIVE'>إيجابي</option>
-                      </select>
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-lg font-bold w-16'>HIV:</span>
+                        <select
+                          value={formData.maleHIVstatus}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maleHIVstatus: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 flex-1'>
+                          <option value='NEGATIVE'>سلبي</option>
+                          <option value='POSITIVE'>إيجابي</option>
+                        </select>
+                      </div>
+                      {formData.maleHIVstatus === "POSITIVE" && (
+                        <input
+                          type='text'
+                          value={formData.maleHIVvalue}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maleHIVvalue: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 w-full'
+                          placeholder='القيمة الرقمية'
+                        />
+                      )}
                     </div>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-lg font-bold w-16'>HBS:</span>
-                      <select
-                        value={formData.maleHBSstatus}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            maleHBSstatus: e.target.value,
-                          })
-                        }
-                        className='input-field text-sm py-1 flex-1'>
-                        <option value='NEGATIVE'>سلبي</option>
-                        <option value='POSITIVE'>إيجابي</option>
-                      </select>
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-lg font-bold w-16'>HBS:</span>
+                        <select
+                          value={formData.maleHBSstatus}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maleHBSstatus: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 flex-1'>
+                          <option value='NEGATIVE'>سلبي</option>
+                          <option value='POSITIVE'>إيجابي</option>
+                        </select>
+                      </div>
+                      {formData.maleHBSstatus === "POSITIVE" && (
+                        <input
+                          type='text'
+                          value={formData.maleHBSvalue}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maleHBSvalue: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 w-full'
+                          placeholder='القيمة الرقمية'
+                        />
+                      )}
                     </div>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-lg font-bold w-16'>HBC:</span>
-                      <select
-                        value={formData.maleHBCstatus}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            maleHBCstatus: e.target.value,
-                          })
-                        }
-                        className='input-field text-sm py-1 flex-1'>
-                        <option value='NEGATIVE'>سلبي</option>
-                        <option value='POSITIVE'>إيجابي</option>
-                      </select>
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-lg font-bold w-16'>HBC:</span>
+                        <select
+                          value={formData.maleHBCstatus}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maleHBCstatus: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 flex-1'>
+                          <option value='NEGATIVE'>سلبي</option>
+                          <option value='POSITIVE'>إيجابي</option>
+                        </select>
+                      </div>
+                      {formData.maleHBCstatus === "POSITIVE" && (
+                        <input
+                          type='text'
+                          value={formData.maleHBCvalue}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maleHBCvalue: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 w-full'
+                          placeholder='القيمة الرقمية'
+                        />
+                      )}
                     </div>
+                  </div>
+
+                  {/* Checkbox for Hemoglobin */}
+                  <div className='flex items-center gap-2 mt-3'>
+                    <input
+                      type='checkbox'
+                      id='maleHemoglobin'
+                      checked={formData.maleHemoglobinEnabled}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          maleHemoglobinEnabled: e.target.checked,
+                        })
+                      }
+                      className='w-4 h-4'
+                    />
+                    <label
+                      htmlFor='maleHemoglobin'
+                      className='text-sm font-semibold'>
+                      الخضاب الشاذة
+                    </label>
                   </div>
 
                   <textarea
@@ -582,51 +599,120 @@ const DoctorPage = () => {
                   </select>
 
                   <div className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-lg font-bold w-16'>HIV:</span>
-                      <select
-                        value={formData.femaleHIVstatus}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            femaleHIVstatus: e.target.value,
-                          })
-                        }
-                        className='input-field text-sm py-1 flex-1'>
-                        <option value='NEGATIVE'>سلبي</option>
-                        <option value='POSITIVE'>إيجابي</option>
-                      </select>
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-lg font-bold w-16'>HIV:</span>
+                        <select
+                          value={formData.femaleHIVstatus}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              femaleHIVstatus: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 flex-1'>
+                          <option value='NEGATIVE'>سلبي</option>
+                          <option value='POSITIVE'>إيجابي</option>
+                        </select>
+                      </div>
+                      {formData.femaleHIVstatus === "POSITIVE" && (
+                        <input
+                          type='text'
+                          value={formData.femaleHIVvalue}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              femaleHIVvalue: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 w-full'
+                          placeholder='القيمة الرقمية'
+                        />
+                      )}
                     </div>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-lg font-bold w-16'>HBS:</span>
-                      <select
-                        value={formData.femaleHBSstatus}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            femaleHBSstatus: e.target.value,
-                          })
-                        }
-                        className='input-field text-sm py-1 flex-1'>
-                        <option value='NEGATIVE'>سلبي</option>
-                        <option value='POSITIVE'>إيجابي</option>
-                      </select>
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-lg font-bold w-16'>HBS:</span>
+                        <select
+                          value={formData.femaleHBSstatus}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              femaleHBSstatus: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 flex-1'>
+                          <option value='NEGATIVE'>سلبي</option>
+                          <option value='POSITIVE'>إيجابي</option>
+                        </select>
+                      </div>
+                      {formData.femaleHBSstatus === "POSITIVE" && (
+                        <input
+                          type='text'
+                          value={formData.femaleHBSvalue}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              femaleHBSvalue: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 w-full'
+                          placeholder='القيمة الرقمية'
+                        />
+                      )}
                     </div>
-                    <div className='flex items-center gap-2'>
-                      <span className='text-lg font-bold w-16'>HBC:</span>
-                      <select
-                        value={formData.femaleHBCstatus}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            femaleHBCstatus: e.target.value,
-                          })
-                        }
-                        className='input-field text-sm py-1 flex-1'>
-                        <option value='NEGATIVE'>سلبي</option>
-                        <option value='POSITIVE'>إيجابي</option>
-                      </select>
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-lg font-bold w-16'>HBC:</span>
+                        <select
+                          value={formData.femaleHBCstatus}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              femaleHBCstatus: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 flex-1'>
+                          <option value='NEGATIVE'>سلبي</option>
+                          <option value='POSITIVE'>إيجابي</option>
+                        </select>
+                      </div>
+                      {formData.femaleHBCstatus === "POSITIVE" && (
+                        <input
+                          type='text'
+                          value={formData.femaleHBCvalue}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              femaleHBCvalue: e.target.value,
+                            })
+                          }
+                          className='input-field text-sm py-1 w-full'
+                          placeholder='القيمة الرقمية'
+                        />
+                      )}
                     </div>
+                  </div>
+
+                  {/* Checkbox for Hemoglobin */}
+                  <div className='flex items-center gap-2 mt-3'>
+                    <input
+                      type='checkbox'
+                      id='femaleHemoglobin'
+                      checked={formData.femaleHemoglobinEnabled}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          femaleHemoglobinEnabled: e.target.checked,
+                        })
+                      }
+                      className='w-4 h-4'
+                    />
+                    <label
+                      htmlFor='femaleHemoglobin'
+                      className='text-sm font-semibold'>
+                      الخضاب الشاذة
+                    </label>
                   </div>
 
                   <textarea
@@ -644,6 +730,320 @@ const DoctorPage = () => {
                 </div>
               </div>
 
+              {/* Hemoglobin Forms */}
+              {(formData.maleHemoglobinEnabled ||
+                formData.femaleHemoglobinEnabled) && (
+                <div
+                  className='mt-4 p-4 rounded-lg'
+                  style={{ backgroundColor: "var(--light)" }}>
+                  <h3
+                    className='text-lg font-semibold mb-4'
+                    style={{ color: "var(--primary)" }}>
+                    فحص الخضاب الشاذة
+                  </h3>
+
+                  <div className='space-y-6'>
+                    {/* Male Hemoglobin Form */}
+                    {formData.maleHemoglobinEnabled && (
+                      <div className='p-3 bg-white rounded-lg'>
+                        <h4
+                          className='text-sm font-semibold mb-3'
+                          style={{ color: "var(--primary)" }}>
+                          👨 الزوج
+                        </h4>
+                        <div className='grid grid-cols-4 gap-3'>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbS
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbS}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbS: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbF
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbF}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbF: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbA1c
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbA1c}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbA1c: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbA2
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbA2}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbA2: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbSc
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbSc}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbSc: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbD
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbD}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbD: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbE
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbE}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbE: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbC
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.maleHbC}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  maleHbC: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Female Hemoglobin Form */}
+                    {formData.femaleHemoglobinEnabled && (
+                      <div className='p-3 bg-white rounded-lg'>
+                        <h4
+                          className='text-sm font-semibold mb-3'
+                          style={{ color: "var(--primary)" }}>
+                          👩 الزوجة
+                        </h4>
+                        <div className='grid grid-cols-4 gap-3'>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbS
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbS}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbS: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbF
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbF}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbF: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbA1c
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbA1c}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbA1c: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbA2
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbA2}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbA2: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbSc
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbSc}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbSc: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbD
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbD}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbD: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbE
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbE}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbE: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                          <div>
+                            <label className='text-xs font-semibold mb-1 block'>
+                              HbC
+                            </label>
+                            <input
+                              type='text'
+                              value={formData.femaleHbC}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  femaleHbC: e.target.value,
+                                })
+                              }
+                              className='input-field text-sm py-1'
+                              placeholder='القيمة'
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* General Notes */}
               <div className='mt-4'>
                 <textarea
@@ -658,84 +1058,61 @@ const DoctorPage = () => {
               </div>
 
               {/* Buttons */}
-              <div className='pt-4 flex flex-row items-center justify-evenly gap-4'>
-                <div className='flex flex-row gap-3 w-full items-center justify-center'>
-                  <button
-                    onClick={handleSave}
-                    disabled={loading || !hasBeenCalled}
-                    className='btn-success py-3 text-lg disabled:opacity-50'>
-                    {loading ? " جاري الحفظ..." : " حفظ النهائي وإنهاء الدور"}
-                  </button>
+              <div className='pt-4 flex flex-row items-center justify-between gap-4'>
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className='btn-success py-3 px-8 text-lg disabled:opacity-50'>
+                  {loading ? "💾 جاري الحفظ..." : "✅ حفظ النهائي وإنهاء الدور"}
+                </button>
 
-                  {/* أزرار إعادة النداء والإلغاء */}
-                  <div className='flex gap-3'>
-                    {/* زر إعادة النداء */}
-                    {hasBeenCalled && (
-                      <button
-                        onClick={handleRecall}
-                        disabled={loading || recallCooldown > 0}
-                        className='btn-success py-3 text-lg disabled:opacity-50'
-                        style={{
-                          backgroundColor:
-                            recallCooldown > 0 ? "#9ca3af" : "var(--accent)",
-                        }}>
-                        {loading
-                          ? " جاري النداء..."
-                          : recallCooldown > 0
-                          ? ` انتظر ${recallCooldown}ث`
-                          : ` إعادة النداء (${recallCount}/3)`}
-                      </button>
-                    )}
-
-                    {/* زر استدعاء الآن (فقط من القائمة) */}
-                    {isFromSidebar && !hasBeenCalled && (
-                      <button
-                        onClick={handleRecall}
-                        disabled={loading}
-                        className='btn-success py-3 text-lg disabled:opacity-50'
-                        style={{ backgroundColor: "var(--primary)" }}>
-                        {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={handleCancelQueue}
-                      disabled={loading || recallCount < 3}
-                      className='btn-danger py-3 text-lg disabled:opacity-50'
-                      style={{
-                        backgroundColor:
-                          recallCount >= 3 ? "#dc2626" : "#9ca3af",
-                      }}>
-                      {loading ? " جاري الإلغاء..." : "لم يحضر"}
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setCurrentPatient(null);
-                      setRecallCount(0);
-                      setIsFromSidebar(false);
-                      setFormData({
-                        maleBloodType: "",
-                        femaleBloodType: "",
-                        maleHIVstatus: "NEGATIVE",
-                        femaleHIVstatus: "NEGATIVE",
-                        maleHBSstatus: "NEGATIVE",
-                        femaleHBSstatus: "NEGATIVE",
-                        maleHBCstatus: "NEGATIVE",
-                        femaleHBCstatus: "NEGATIVE",
-                        maleNotes: "",
-                        femaleNotes: "",
-                        notes: "",
-                      });
-                    }}
-                    className='bg-gray-500 text-white hover:opacity-80 cursor-pointer rounded-lg py-3 px-6 text-lg'>
-                    خروج
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setCurrentPatient(null);
+                    setFormData({
+                      maleBloodType: "",
+                      femaleBloodType: "",
+                      maleHIVstatus: "NEGATIVE",
+                      femaleHIVstatus: "NEGATIVE",
+                      maleHBSstatus: "NEGATIVE",
+                      femaleHBSstatus: "NEGATIVE",
+                      maleHBCstatus: "NEGATIVE",
+                      femaleHBCstatus: "NEGATIVE",
+                      maleHIVvalue: "",
+                      femaleHIVvalue: "",
+                      maleHBSvalue: "",
+                      femaleHBSvalue: "",
+                      maleHBCvalue: "",
+                      femaleHBCvalue: "",
+                      maleHemoglobinEnabled: false,
+                      maleHbS: "",
+                      maleHbF: "",
+                      maleHbA1c: "",
+                      maleHbA2: "",
+                      maleHbSc: "",
+                      maleHbD: "",
+                      maleHbE: "",
+                      maleHbC: "",
+                      femaleHemoglobinEnabled: false,
+                      femaleHbS: "",
+                      femaleHbF: "",
+                      femaleHbA1c: "",
+                      femaleHbA2: "",
+                      femaleHbSc: "",
+                      femaleHbD: "",
+                      femaleHbE: "",
+                      femaleHbC: "",
+                      maleNotes: "",
+                      femaleNotes: "",
+                      notes: "",
+                    });
+                  }}
+                  className='bg-gray-500 text-white hover:opacity-80 cursor-pointer rounded-lg py-3 px-6 text-lg'>
+                  ❌ خروج
+                </button>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Developed By Footer */}
           <div className='p-4 flex flex-row justify-center items-center text-center text-sm text-gray-500 gap-1'>

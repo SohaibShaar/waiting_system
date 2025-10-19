@@ -4,6 +4,9 @@ import {
   createDoctorData,
   getDoctorDataByQueueId,
   updateDoctorData,
+  saveCompletedPatientData,
+  getAllCompletedPatientData,
+  getCompletedPatientDataById,
 } from "../services/doctor.service";
 import { emitQueueUpdate, emitQueueCompleted, emitScreenDataUpdate } from "..";
 
@@ -24,6 +27,30 @@ export async function addDoctorData(req: Request, res: Response) {
       femaleHBSstatus,
       maleHBCstatus,
       femaleHBCstatus,
+      maleHIVvalue,
+      femaleHIVvalue,
+      maleHBSvalue,
+      femaleHBSvalue,
+      maleHBCvalue,
+      femaleHBCvalue,
+      maleHemoglobinEnabled,
+      maleHbS,
+      maleHbF,
+      maleHbA1c,
+      maleHbA2,
+      maleHbSc,
+      maleHbD,
+      maleHbE,
+      maleHbC,
+      femaleHemoglobinEnabled,
+      femaleHbS,
+      femaleHbF,
+      femaleHbA1c,
+      femaleHbA2,
+      femaleHbSc,
+      femaleHbD,
+      femaleHbE,
+      femaleHbC,
       maleNotes,
       femaleNotes,
       notes,
@@ -78,10 +105,37 @@ export async function addDoctorData(req: Request, res: Response) {
       femaleHBSstatus,
       maleHBCstatus,
       femaleHBCstatus,
+      ...(maleHIVvalue && { maleHIVvalue }),
+      ...(femaleHIVvalue && { femaleHIVvalue }),
+      ...(maleHBSvalue && { maleHBSvalue }),
+      ...(femaleHBSvalue && { femaleHBSvalue }),
+      ...(maleHBCvalue && { maleHBCvalue }),
+      ...(femaleHBCvalue && { femaleHBCvalue }),
+      ...(maleHemoglobinEnabled !== undefined && { maleHemoglobinEnabled }),
+      ...(maleHbS && { maleHbS }),
+      ...(maleHbF && { maleHbF }),
+      ...(maleHbA1c && { maleHbA1c }),
+      ...(maleHbA2 && { maleHbA2 }),
+      ...(maleHbSc && { maleHbSc }),
+      ...(maleHbD && { maleHbD }),
+      ...(maleHbE && { maleHbE }),
+      ...(maleHbC && { maleHbC }),
+      ...(femaleHemoglobinEnabled !== undefined && { femaleHemoglobinEnabled }),
+      ...(femaleHbS && { femaleHbS }),
+      ...(femaleHbF && { femaleHbF }),
+      ...(femaleHbA1c && { femaleHbA1c }),
+      ...(femaleHbA2 && { femaleHbA2 }),
+      ...(femaleHbSc && { femaleHbSc }),
+      ...(femaleHbD && { femaleHbD }),
+      ...(femaleHbE && { femaleHbE }),
+      ...(femaleHbC && { femaleHbC }),
       ...(maleNotes && { maleNotes }),
       ...(femaleNotes && { femaleNotes }),
       ...(notes && { notes }),
     });
+
+    // حفظ البيانات الكاملة من جميع المحطات
+    await saveCompletedPatientData(queueId, patientId);
 
     // إرسال إشعارات WebSocket
     emitQueueUpdate({
@@ -168,6 +222,62 @@ export async function updateDoctorDataController(req: Request, res: Response) {
       success: true,
       doctorData: updatedData,
       message: "تم تحديث بيانات الطبيب",
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * الحصول على جميع البيانات المكتملة
+ * GET /api/doctor/completed
+ */
+export async function getCompletedData(req: Request, res: Response) {
+  try {
+    const completedData = await getAllCompletedPatientData();
+
+    res.json({
+      success: true,
+      data: completedData,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * الحصول على البيانات المكتملة لمريض معين
+ * GET /api/doctor/completed/:id
+ */
+export async function getCompletedDataById(req: Request, res: Response) {
+  try {
+    const id = parseInt(req.params.id as string);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        error: "المعرف غير صالح",
+      });
+    }
+
+    const completedData = await getCompletedPatientDataById(id);
+
+    if (!completedData) {
+      return res.status(404).json({
+        success: false,
+        error: "البيانات غير موجودة",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: completedData,
     });
   } catch (error: any) {
     res.status(500).json({
