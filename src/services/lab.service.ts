@@ -85,4 +85,23 @@ async function updateLabData(
   });
 }
 
-export { createLabData, getLabDataByQueueId, updateLabData };
+/**
+ * جلب جميع سجلات المختبر (للأرشيف)
+ */
+async function getAllLabData() {
+  return await prisma.labData.findMany({
+    include: {
+      patient: true,
+      queue: {
+        include: {
+          ReceptionData: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+export { createLabData, getLabDataByQueueId, updateLabData, getAllLabData };

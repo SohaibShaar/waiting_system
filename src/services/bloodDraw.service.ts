@@ -135,8 +135,28 @@ async function generateTubeNumbersForQueue(queueId: number) {
   return tubes;
 }
 
+/**
+ * جلب جميع سجلات سحب الدم (للأرشيف)
+ */
+async function getAllBloodDrawData() {
+  return await prisma.bloodDrawData.findMany({
+    include: {
+      patient: true,
+      queue: {
+        include: {
+          ReceptionData: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
 export {
   createBloodDrawData,
   getBloodDrawDataByQueueId,
   generateTubeNumbersForQueue,
+  getAllBloodDrawData,
 };

@@ -3,9 +3,16 @@ import {
   addLabData,
   getLabData,
   updateLabDataController,
+  getAllLabDataController,
 } from "../controllers/lab.controller";
 
 const router = Router();
+
+/**
+ * GET /api/lab/all
+ * جلب جميع سجلات المختبر (للأرشيف)
+ */
+router.get("/all", getAllLabDataController);
 
 /**
  * POST /api/lab

@@ -14,7 +14,6 @@ const DisplayScreen = () => {
   const [recentCalls, setRecentCalls] = useState<CalledPatient[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
-  const [showAudioPrompt, setShowAudioPrompt] = useState(true);
   const [isProcessingAnnouncement, setIsProcessingAnnouncement] =
     useState(false);
   const [pendingCallsCount, setPendingCallsCount] = useState(0); // لتتبع التغييرات
@@ -30,23 +29,23 @@ const DisplayScreen = () => {
     return stations[displayNumber] || `الشاشة ${displayNumber}`;
   }, []);
 
-  // تفعيل الصوت
-  const enableAudio = useCallback(async () => {
-    try {
-      await audioService.loadVoices();
-      // تشغيل صوت تجريبي للتأكد من عمل الصوت
-      await audioService.playNotification();
-      setAudioEnabled(true);
-      setShowAudioPrompt(false);
-      console.log("✅ تم تفعيل الصوت");
-    } catch (error) {
-      console.error("❌ خطأ في تفعيل الصوت:", error);
-    }
-  }, []);
-
-  // تحميل الأصوات عند تحميل الصفحة
+  // تفعيل الصوت تلقائياً عند تحميل الصفحة
   useEffect(() => {
-    audioService.loadVoices();
+    const initAudio = async () => {
+      try {
+        await audioService.loadVoices();
+        // محاولة تشغيل صوت تجريبي
+        await audioService.playNotification();
+        setAudioEnabled(true);
+        console.log("✅ تم تفعيل الصوت تلقائياً");
+      } catch (error) {
+        console.error("❌ خطأ في تفعيل الصوت التلقائي:", error);
+        // في حالة فشل التشغيل التلقائي، نفعل الصوت على أي حال
+        setAudioEnabled(true);
+      }
+    };
+
+    initAudio();
   }, []);
 
   // معالجة طابور الاستدعاءات
@@ -167,42 +166,6 @@ const DisplayScreen = () => {
       style={{
         background: "#054239",
       }}>
-      {/* Audio Prompt Overlay */}
-      {showAudioPrompt && (
-        <div
-          className='fixed inset-0 z-50 flex items-center justify-center'
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
-          <div
-            className='rounded-2xl p-8 max-w-md text-center shadow-2xl'
-            style={{ backgroundColor: "var(--white)" }}>
-            <div className='text-6xl mb-4'>🔊</div>
-            <h2
-              className='text-2xl font-bold mb-4'
-              style={{ color: "var(--primary)" }}>
-              تفعيل الصوت
-            </h2>
-            <p className='mb-6' style={{ color: "var(--dark)" }}>
-              اضغط على الزر لتفعيل الإعلانات الصوتية للأدوار
-            </p>
-            <button
-              onClick={enableAudio}
-              className='px-8 py-4 rounded-lg font-bold text-xl transition shadow-lg hover:shadow-xl'
-              style={{
-                backgroundColor: "var(--primary)",
-                color: "var(--white)",
-              }}>
-              🔊 تفعيل الصوت
-            </button>
-            <button
-              onClick={() => setShowAudioPrompt(false)}
-              className='block mx-auto mt-4 text-sm underline'
-              style={{ color: "var(--dark)" }}>
-              تخطي (بدون صوت)
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div
         className='p-6 shadow-lg'
@@ -211,17 +174,16 @@ const DisplayScreen = () => {
           <h1 className='text-4xl font-bold'>🏥 الأدوار</h1>
           <div className='flex items-center gap-4'>
             {/* Audio Status */}
-            <button
-              onClick={enableAudio}
-              className='text-lg px-4 py-2 rounded-lg transition'
+            <div
+              className='text-lg px-4 py-2 rounded-lg'
               style={{
                 backgroundColor: audioEnabled
                   ? "rgba(34, 197, 94, 0.2)"
                   : "rgba(239, 68, 68, 0.2)",
                 color: audioEnabled ? "#22c55e" : "#ef4444",
               }}>
-              {audioEnabled ? "🔊 الصوت مفعل" : "🔇 الصوت معطل"}
-            </button>
+              {audioEnabled ? "🔊 الصوت مفعل" : "🔇 جاري تفعيل الصوت..."}
+            </div>
             {/* Connection Status */}
             <div className='text-lg'>
               {isConnected ? (

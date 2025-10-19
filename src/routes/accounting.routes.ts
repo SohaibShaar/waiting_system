@@ -3,9 +3,16 @@ import {
   addAccountingData,
   getAccountingData,
   updateAccountingDataController,
+  getAllAccountingDataController,
 } from "../controllers/accounting.controller";
 
 const router = Router();
+
+/**
+ * GET /api/accounting/all
+ * جلب جميع سجلات المحاسبة (للأرشيف)
+ */
+router.get("/all", getAllAccountingDataController);
 
 /**
  * POST /api/accounting

@@ -4,6 +4,7 @@ import {
   createLabData,
   getLabDataByQueueId,
   updateLabData,
+  getAllLabData,
 } from "../services/lab.service";
 import { emitQueueUpdate, emitScreenDataUpdate } from "..";
 
@@ -132,10 +133,39 @@ export async function updateLabDataController(req: Request, res: Response) {
 
     const updatedData = await updateLabData(queueId, req.body);
 
+    // إرسال إشعارات WebSocket بعد التحديث
+    emitQueueUpdate({
+      type: "LAB_UPDATED",
+      queueId,
+    });
+
+    emitScreenDataUpdate();
+
     res.json({
       success: true,
       labData: updatedData,
       message: "تم تحديث بيانات المختبر",
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * جلب جميع سجلات المختبر (للأرشيف)
+ * GET /api/lab
+ */
+export async function getAllLabDataController(req: Request, res: Response) {
+  try {
+    const allData = await getAllLabData();
+
+    res.json({
+      success: true,
+      data: allData,
+      count: allData.length,
     });
   } catch (error: any) {
     res.status(500).json({

@@ -15,6 +15,7 @@ import labRoutes from "./routes/lab.routes";
 import bloodDrawRoutes from "./routes/bloodDraw.routes";
 import doctorRoutes from "./routes/doctor.routes";
 import accountingRoutes from "./routes/accounting.routes";
+import authRoutes from "./routes/auth.routes";
 
 // Import WebSocket functions
 import { initSocketIO } from "./websocket/socket";
@@ -52,6 +53,7 @@ app.use("/api/doctor", doctorRoutes);
 app.use("/api/accounting", accountingRoutes);
 app.use("/api/favPrices", favPricesRoutes);
 app.use("/api/fastPrice", fastPriceRoutes);
+app.use("/api/auth", authRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {

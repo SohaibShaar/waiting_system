@@ -43,6 +43,25 @@ interface FavoritePrice {
   updatedAt: string;
 }
 
+interface ArchiveRecord {
+  id: number;
+  queueId: number;
+  patientId: number;
+  totalAmount: number;
+  isPaid: boolean;
+  notes: string | null;
+  createdAt: string;
+  queue: {
+    queueNumber: number;
+    ReceptionData: {
+      maleName: string | null;
+      maleLastName: string | null;
+      femaleName: string | null;
+      femaleLastName: string | null;
+    } | null;
+  };
+}
+
 const AccountingPage = () => {
   const [currentPatient, setCurrentPatient] = useState<CurrentPatient | null>(
     null
@@ -62,6 +81,14 @@ const AccountingPage = () => {
   const [fastAddValue, setFastAddValue] = useState(0);
   const [isPrinting, setIsPrinting] = useState(false); // حالة الطباعة
   const [showPrintModal, setShowPrintModal] = useState(false); // عرض modal الطباعة
+
+  // Archive states
+  const [showArchive, setShowArchive] = useState(false);
+  const [archiveData, setArchiveData] = useState<ArchiveRecord[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // مرجع للتمرير إلى أعلى المحتوى
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -223,22 +250,48 @@ const AccountingPage = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post(`${API_URL}/accounting`, {
-        queueId: currentPatient.queueId,
-        patientId: currentPatient.patientId,
-        totalAmount: parseFloat(amount),
-        isPaid: true,
-        notes,
-      });
 
-      if (response.data.success) {
-        await axios.post(`${API_URL}/stations/${stationId}/complete-service`, {
+      // إذا كان في وضع التعديل، استخدم PUT بدلاً من POST
+      if (isEditMode) {
+        const response = await axios.put(
+          `${API_URL}/accounting/${currentPatient.queueId}`,
+          {
+            totalAmount: parseFloat(amount),
+            isPaid: true,
+            notes,
+          }
+        );
+
+        if (response.data.success) {
+          alert("✅ تم تحديث بيانات المحاسبة بنجاح!");
+          setIsEditMode(false);
+          clearPatientData();
+          // إعادة تحميل الأرشيف
+          if (showArchive) {
+            fetchArchiveData();
+          }
+        }
+      } else {
+        const response = await axios.post(`${API_URL}/accounting`, {
           queueId: currentPatient.queueId,
-          notes: "تم الدفع",
+          patientId: currentPatient.patientId,
+          totalAmount: parseFloat(amount),
+          isPaid: true,
+          notes,
         });
 
-        // عرض modal السؤال عن الطباعة
-        setShowPrintModal(true);
+        if (response.data.success) {
+          await axios.post(
+            `${API_URL}/stations/${stationId}/complete-service`,
+            {
+              queueId: currentPatient.queueId,
+              notes: "تم الدفع",
+            }
+          );
+
+          // عرض modal السؤال عن الطباعة
+          setShowPrintModal(true);
+        }
       }
     } catch (error) {
       const err = error as {
@@ -252,6 +305,103 @@ const AccountingPage = () => {
       setLoading(false);
     }
   };
+
+  // جلب بيانات الأرشيف
+  const fetchArchiveData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/accounting/all`);
+      if (response.data.success) {
+        setArchiveData(response.data.data);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الأرشيف:", error);
+      alert("❌ حدث خطأ في جلب بيانات الأرشيف");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // فتح الأرشيف
+  const handleOpenArchive = () => {
+    setShowArchive(true);
+    fetchArchiveData();
+  };
+
+  // تحميل سجل من الأرشيف للتعديل
+  const handleLoadFromArchive = async (record: ArchiveRecord) => {
+    try {
+      setLoading(true);
+      // جلب بيانات الدور الكاملة
+      const queueResponse = await axios.get(
+        `${API_URL}/queue/${record.queueId}`
+      );
+
+      if (queueResponse.data.success) {
+        const fullQueue = queueResponse.data.queue;
+        const reception = fullQueue.ReceptionData;
+
+        setCurrentPatient({
+          queueId: fullQueue.id,
+          queueNumber: fullQueue.queueNumber,
+          patientId: fullQueue.patientId,
+          patientName: fullQueue.patient?.name || "",
+          maleName: reception?.maleName || "",
+          femaleName: reception?.femaleName || "",
+          priority: fullQueue.priority || 0,
+          ReceptionData: reception,
+        });
+
+        // تحميل بيانات المحاسبة
+        setAmount(record.totalAmount.toString());
+        setIsPaid(record.isPaid);
+        setNotes(record.notes || "");
+        setIsEditMode(true);
+        setHasBeenCalled(true);
+        setShowArchive(false);
+
+        // التمرير إلى أعلى
+        if (mainContentRef.current) {
+          mainContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        console.log(`✅ تم تحميل السجل #${fullQueue.queueNumber} للتعديل`);
+      }
+    } catch (error) {
+      console.error("خطأ في تحميل السجل:", error);
+      alert("❌ حدث خطأ في تحميل السجل");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // تصفية الأرشيف
+  const filteredArchive = archiveData.filter((record) => {
+    const searchLower = searchTerm.toLowerCase();
+    const queueNumber = record.queue.queueNumber.toString();
+    const patientId = record.patientId.toString();
+    const maleName = record.queue.ReceptionData?.maleName?.toLowerCase() || "";
+    const femaleName =
+      record.queue.ReceptionData?.femaleName?.toLowerCase() || "";
+
+    return (
+      queueNumber.includes(searchLower) ||
+      patientId.includes(searchLower) ||
+      maleName.includes(searchLower) ||
+      femaleName.includes(searchLower)
+    );
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredArchive.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredArchive.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // عند اختيار دور من القائمة
   const handleSelectQueueFromSidebar = async (queue: {
@@ -381,6 +531,7 @@ const AccountingPage = () => {
     setAmount("");
     setIsPaid(false);
     setNotes("");
+    setIsEditMode(false);
   };
 
   // طباعة الإيصال
@@ -523,14 +674,22 @@ const AccountingPage = () => {
                     اضغط على الزر لاستدعاء المراجع التالي
                   </p>
                 </div>
-                <button
-                  onClick={callNextPatient}
-                  disabled={loading}
-                  className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
-                  {loading
-                    ? "⏳ جاري الاستدعاء..."
-                    : "📢 استدعاء المراجع التالي"}
-                </button>
+                <div className='flex gap-4 justify-center'>
+                  <button
+                    onClick={callNextPatient}
+                    disabled={loading}
+                    className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
+                    {loading
+                      ? "⏳ جاري الاستدعاء..."
+                      : "📢 استدعاء المراجع التالي"}
+                  </button>
+                  <button
+                    onClick={handleOpenArchive}
+                    disabled={loading}
+                    className='bg-blue-600 text-white hover:bg-blue-700 cursor-pointer rounded-lg px-8 py-4 text-xl disabled:opacity-50'>
+                    📁 الأرشيف
+                  </button>
+                </div>
 
                 {/* رسالة الخطأ */}
                 {errorMessage && (
@@ -872,6 +1031,267 @@ const AccountingPage = () => {
           />
         </div>
       </div>
+
+      {/* Archive Modal */}
+      {showArchive && (
+        <div
+          className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+          onClick={() => setShowArchive(false)}>
+          <div
+            className='bg-white rounded-2xl shadow-2xl p-8 max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col'
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className='flex justify-between items-center mb-6'>
+              <h2
+                className='text-3xl font-bold'
+                style={{ color: "var(--primary)" }}>
+                📁 أرشيف المحاسبة
+              </h2>
+              <button
+                onClick={() => setShowArchive(false)}
+                className='text-gray-500 hover:text-gray-700 text-3xl'>
+                ×
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className='mb-4'>
+              <input
+                type='text'
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder='بحث برقم الدور أو ID أو اسم المريض...'
+                className='w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500'
+              />
+            </div>
+
+            {/* Records Count */}
+            <div className='mb-4 flex justify-between items-center'>
+              <div className='text-sm text-gray-600'>
+                عدد السجلات: {filteredArchive.length} | الصفحة {currentPage} من{" "}
+                {totalPages || 1}
+              </div>
+              <div className='text-sm text-gray-600'>
+                عرض {indexOfFirstItem + 1} -{" "}
+                {Math.min(indexOfLastItem, filteredArchive.length)} من{" "}
+                {filteredArchive.length}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className='flex-1 overflow-y-auto'>
+              <table className='w-full border-collapse'>
+                <thead className='bg-gray-100 sticky top-0'>
+                  <tr>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      رقم الدور
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      ID
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      الخطيب
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      الخطيبة
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      المبلغ
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      التاريخ
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      الإجراءات
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentItems.map((record) => (
+                    <tr key={record.id} className='hover:bg-gray-50'>
+                      <td className='border border-gray-300 px-4 py-3 text-center font-bold'>
+                        #{record.queue.queueNumber}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        {record.patientId}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        {record.queue.ReceptionData?.maleName || "-"}{" "}
+                        {record.queue.ReceptionData?.maleLastName || ""}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        {record.queue.ReceptionData?.femaleName || "-"}{" "}
+                        {record.queue.ReceptionData?.femaleLastName || ""}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center font-semibold text-green-600'>
+                        {record.totalAmount.toLocaleString()} ل.س
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center text-sm'>
+                        {new Date(record.createdAt).toLocaleDateString("ar-US")}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        <div className='flex gap-2 justify-center'>
+                          <button
+                            onClick={() => handleLoadFromArchive(record)}
+                            className='bg-blue-600 text-white hover:bg-blue-700 cursor-pointer rounded-lg px-4 py-2 text-sm'>
+                            📝 تعديل
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                // تحميل البيانات أولاً
+                                const queueResponse = await axios.get(
+                                  `${API_URL}/queue/${record.queueId}`
+                                );
+
+                                if (queueResponse.data.success) {
+                                  const fullQueue = queueResponse.data.queue;
+                                  const reception = fullQueue.ReceptionData;
+
+                                  // الطباعة مباشرة
+                                  const now = new Date();
+                                  const dateString = now.toLocaleDateString(
+                                    "ar-US",
+                                    {
+                                      year: "numeric",
+                                      month: "numeric",
+                                      day: "numeric",
+                                    }
+                                  );
+
+                                  await printReceipt(
+                                    reception?.maleName || "-",
+                                    reception?.maleLastName || "-",
+                                    reception?.maleFatherName || "-",
+                                    reception?.maleMotherName || "-",
+                                    new Date(
+                                      reception?.maleBirthDate || "-"
+                                    ).toLocaleDateString("ar-US", {
+                                      year: "numeric",
+                                    }) || "-",
+                                    reception?.maleRegistration || "-",
+                                    reception?.femaleName || "-",
+                                    reception?.femaleLastName || "-",
+                                    reception?.femaleFatherName || "-",
+                                    reception?.femaleMotherName || "-",
+                                    new Date(
+                                      reception?.femaleBirthDate || "-"
+                                    ).toLocaleDateString("ar-US", {
+                                      year: "numeric",
+                                    }) || "-",
+                                    reception?.femaleRegistration || "-",
+                                    dateString
+                                  );
+                                  console.log("✅ تم إرسال الإيصال للطباعة");
+                                }
+                              } catch (error) {
+                                console.error(
+                                  "❌ خطأ في طباعة الإيصال:",
+                                  error
+                                );
+                                alert("❌ حدث خطأ في طباعة الإيصال");
+                              }
+                            }}
+                            className='bg-green-600 text-white hover:bg-green-700 cursor-pointer rounded-lg px-4 py-2 text-sm'>
+                            🖨️ طباعة
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredArchive.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className='border border-gray-300 px-4 py-8 text-center text-gray-500'>
+                        لا توجد سجلات
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className='mt-4 flex justify-center items-center gap-2'>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  الأولى
+                </button>
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  السابقة
+                </button>
+
+                <div className='flex gap-1'>
+                  {[...Array(totalPages)].map((_, index) => {
+                    const pageNum = index + 1;
+                    // Show first 2, last 2, and current +/- 1
+                    if (
+                      pageNum === 1 ||
+                      pageNum === 2 ||
+                      pageNum === totalPages ||
+                      pageNum === totalPages - 1 ||
+                      Math.abs(pageNum - currentPage) <= 1
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-2 rounded-lg ${
+                            currentPage === pageNum
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 hover:bg-gray-300"
+                          }`}>
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (pageNum === 3 || pageNum === totalPages - 2) {
+                      return (
+                        <span key={pageNum} className='px-2'>
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  التالية
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  الأخيرة
+                </button>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div className='mt-6 flex justify-center'>
+              <button
+                onClick={() => setShowArchive(false)}
+                className='bg-gray-500 text-white hover:bg-gray-600 cursor-pointer rounded-lg px-8 py-3 text-lg'>
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal تأكيد الطباعة */}
       {showPrintModal && (

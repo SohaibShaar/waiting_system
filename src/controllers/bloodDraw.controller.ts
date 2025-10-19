@@ -3,6 +3,7 @@ import {
   createBloodDrawData,
   getBloodDrawDataByQueueId,
   generateTubeNumbersForQueue,
+  getAllBloodDrawData,
 } from "../services/bloodDraw.service";
 import { emitQueueUpdate, emitScreenDataUpdate } from "..";
 
@@ -120,6 +121,30 @@ export async function generateTubeNumbers(req: Request, res: Response) {
     res.json({
       success: true,
       tubes,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * جلب جميع سجلات سحب الدم (للأرشيف)
+ * GET /api/blood-draw
+ */
+export async function getAllBloodDrawDataController(
+  req: Request,
+  res: Response
+) {
+  try {
+    const allData = await getAllBloodDrawData();
+
+    res.json({
+      success: true,
+      data: allData,
+      count: allData.length,
     });
   } catch (error: any) {
     res.status(500).json({

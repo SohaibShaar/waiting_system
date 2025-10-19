@@ -3,6 +3,7 @@ import {
   createAccountingData,
   getAccountingDataByQueueId,
   updateAccountingData,
+  getAllAccountingData,
 } from "../services/accounting.service";
 import { emitQueueUpdate, emitScreenDataUpdate } from "..";
 
@@ -116,10 +117,42 @@ export async function updateAccountingDataController(
 
     const updatedData = await updateAccountingData(queueId, req.body);
 
+    // إرسال إشعارات WebSocket بعد التحديث
+    emitQueueUpdate({
+      type: "ACCOUNTING_UPDATED",
+      queueId,
+    });
+
+    emitScreenDataUpdate();
+
     res.json({
       success: true,
       accountingData: updatedData,
       message: "تم تحديث بيانات المحاسبة",
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * جلب جميع سجلات المحاسبة (للأرشيف)
+ * GET /api/accounting
+ */
+export async function getAllAccountingDataController(
+  req: Request,
+  res: Response
+) {
+  try {
+    const allData = await getAllAccountingData();
+
+    res.json({
+      success: true,
+      data: allData,
+      count: allData.length,
     });
   } catch (error: any) {
     res.status(500).json({

@@ -29,6 +29,27 @@ interface TubeNumbers {
   femaleBloodTube2?: string;
 }
 
+interface ArchiveRecord {
+  id: number;
+  queueId: number;
+  patientId: number;
+  maleBloodTube1: string | null;
+  maleBloodTube2: string | null;
+  femaleBloodTube1: string | null;
+  femaleBloodTube2: string | null;
+  notes: string | null;
+  createdAt: string;
+  queue: {
+    queueNumber: number;
+    ReceptionData: {
+      maleName: string | null;
+      maleLastName: string | null;
+      femaleName: string | null;
+      femaleLastName: string | null;
+    } | null;
+  };
+}
+
 const BloodDrawPage = () => {
   const [currentPatient, setCurrentPatient] = useState<CurrentPatient | null>(
     null
@@ -44,6 +65,13 @@ const BloodDrawPage = () => {
   const [isFromSidebar, setIsFromSidebar] = useState(false);
   const [hasBeenCalled, setHasBeenCalled] = useState(false);
   const [recallCooldown, setRecallCooldown] = useState(0);
+
+  // Archive states
+  const [showArchive, setShowArchive] = useState(false);
+  const [archiveData, setArchiveData] = useState<ArchiveRecord[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -367,6 +395,108 @@ const BloodDrawPage = () => {
     }
   };
 
+  // جلب بيانات الأرشيف
+  const fetchArchiveData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/blood-draw/all`);
+      if (response.data.success) {
+        setArchiveData(response.data.data);
+      }
+    } catch (error) {
+      console.error("خطأ في جلب بيانات الأرشيف:", error);
+      alert("❌ حدث خطأ في جلب بيانات الأرشيف");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // فتح الأرشيف
+  const handleOpenArchive = () => {
+    setShowArchive(true);
+    fetchArchiveData();
+  };
+
+  // تحميل سجل من الأرشيف للعرض/إعادة الطباعة
+  const handleLoadFromArchive = async (record: ArchiveRecord) => {
+    try {
+      setLoading(true);
+      // جلب بيانات الدور الكاملة
+      const queueResponse = await axios.get(
+        `${API_URL}/queue/${record.queueId}`
+      );
+
+      if (queueResponse.data.success) {
+        const fullQueue = queueResponse.data.queue;
+        const reception = fullQueue.ReceptionData;
+
+        setCurrentPatient({
+          queueId: fullQueue.id,
+          queueNumber: fullQueue.queueNumber,
+          patientId: fullQueue.patientId,
+          maleName: reception?.maleName || "",
+          femaleName: reception?.femaleName || "",
+          ReceptionData: reception,
+        });
+
+        // تحميل أرقام الأنابيب
+        setTubeNumbers({
+          maleBloodTube1: record.maleBloodTube1 || undefined,
+          maleBloodTube2: record.maleBloodTube2 || undefined,
+          femaleBloodTube1: record.femaleBloodTube1 || undefined,
+          femaleBloodTube2: record.femaleBloodTube2 || undefined,
+        });
+
+        setFormData({
+          notes: record.notes || "",
+        });
+
+        setHasBeenCalled(true);
+        setShowArchive(false);
+
+        // التمرير إلى أعلى
+        if (mainContentRef.current) {
+          mainContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        console.log(`✅ تم تحميل السجل #${fullQueue.queueNumber}`);
+      }
+    } catch (error) {
+      console.error("خطأ في تحميل السجل:", error);
+      alert("❌ حدث خطأ في تحميل السجل");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // تصفية الأرشيف
+  const filteredArchive = archiveData.filter((record) => {
+    const searchLower = searchTerm.toLowerCase();
+    const queueNumber = record.queue.queueNumber.toString();
+    const patientId = record.patientId.toString();
+    const maleName = record.queue.ReceptionData?.maleName?.toLowerCase() || "";
+    const femaleName =
+      record.queue.ReceptionData?.femaleName?.toLowerCase() || "";
+
+    return (
+      queueNumber.includes(searchLower) ||
+      patientId.includes(searchLower) ||
+      maleName.includes(searchLower) ||
+      femaleName.includes(searchLower)
+    );
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredArchive.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredArchive.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   return (
     <div
       className='h-screen flex flex-col'
@@ -393,14 +523,22 @@ const BloodDrawPage = () => {
                     اضغط على الزر لاستدعاء المراجع التالي
                   </p>
                 </div>
-                <button
-                  onClick={callNextPatient}
-                  disabled={loading}
-                  className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
-                  {loading
-                    ? "⏳ جاري الاستدعاء..."
-                    : "📢 استدعاء المراجع التالي"}
-                </button>
+                <div className='flex gap-4 justify-center'>
+                  <button
+                    onClick={callNextPatient}
+                    disabled={loading}
+                    className='btn-primary px-12 py-4 text-xl disabled:opacity-50'>
+                    {loading
+                      ? "⏳ جاري الاستدعاء..."
+                      : "📢 استدعاء المراجع التالي"}
+                  </button>
+                  <button
+                    onClick={handleOpenArchive}
+                    disabled={loading}
+                    className='bg-blue-600 text-white hover:bg-blue-700 cursor-pointer rounded-lg px-8 py-4 text-xl disabled:opacity-50'>
+                    📁 الأرشيف
+                  </button>
+                </div>
 
                 {errorMessage && (
                   <div
@@ -643,6 +781,246 @@ const BloodDrawPage = () => {
           />
         </div>
       </div>
+
+      {/* Archive Modal */}
+      {showArchive && (
+        <div
+          className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+          onClick={() => setShowArchive(false)}>
+          <div
+            className='bg-white rounded-2xl shadow-2xl p-8 max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col'
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className='flex justify-between items-center mb-6'>
+              <h2
+                className='text-3xl font-bold'
+                style={{ color: "var(--primary)" }}>
+                📁 أرشيف سحب الدم
+              </h2>
+              <button
+                onClick={() => setShowArchive(false)}
+                className='text-gray-500 hover:text-gray-700 text-3xl'>
+                ×
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className='mb-4'>
+              <input
+                type='text'
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder='بحث برقم الدور أو ID أو اسم المريض...'
+                className='w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500'
+              />
+            </div>
+
+            {/* Records Count */}
+            <div className='mb-4 flex justify-between items-center'>
+              <div className='text-sm text-gray-600'>
+                عدد السجلات: {filteredArchive.length} | الصفحة {currentPage} من{" "}
+                {totalPages || 1}
+              </div>
+              <div className='text-sm text-gray-600'>
+                عرض {indexOfFirstItem + 1} -{" "}
+                {Math.min(indexOfLastItem, filteredArchive.length)} من{" "}
+                {filteredArchive.length}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className='flex-1 overflow-y-auto'>
+              <table className='w-full border-collapse'>
+                <thead className='bg-gray-100 sticky top-0'>
+                  <tr>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      رقم الدور
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      ID
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      الخطيب
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      الخطيبة
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      أنابيب الدم
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      التاريخ
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
+                      الإجراءات
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentItems.map((record) => (
+                    <tr key={record.id} className='hover:bg-gray-50'>
+                      <td className='border border-gray-300 px-4 py-3 text-center font-bold'>
+                        #{record.queue.queueNumber}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        {record.patientId}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        {record.queue.ReceptionData?.maleName || "-"}{" "}
+                        {record.queue.ReceptionData?.maleLastName || ""}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        {record.queue.ReceptionData?.femaleName || "-"}{" "}
+                        {record.queue.ReceptionData?.femaleLastName || ""}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center text-sm'>
+                        <div className='flex flex-col gap-1'>
+                          {record.maleBloodTube1 && (
+                            <span className='text-blue-600'>
+                              👨 {record.maleBloodTube1} /{" "}
+                              {record.maleBloodTube2}
+                            </span>
+                          )}
+                          {record.femaleBloodTube1 && (
+                            <span className='text-pink-600'>
+                              👩 {record.femaleBloodTube1} /{" "}
+                              {record.femaleBloodTube2}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center text-sm'>
+                        {new Date(record.createdAt).toLocaleDateString("ar-US")}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        <button
+                          onClick={async () => {
+                            await handleLoadFromArchive(record);
+                            // طباعة الملصقات
+                            if (
+                              record.maleBloodTube1 ||
+                              record.femaleBloodTube1
+                            ) {
+                              const { printLabels } = await import(
+                                "../utils/labelPrinter"
+                              );
+                              printLabels(
+                                "♂ الزوج : " +
+                                  (record.queue.ReceptionData?.maleName || "") +
+                                  " " +
+                                  (record.queue.ReceptionData?.maleLastName ||
+                                    ""),
+                                "M" + (record.maleBloodTube1 || ""),
+                                "M" + (record.maleBloodTube2 || ""),
+                                "♀ الزوجة : " +
+                                  (record.queue.ReceptionData?.femaleName ||
+                                    "") +
+                                  " " +
+                                  (record.queue.ReceptionData?.femaleLastName ||
+                                    ""),
+                                "F" + (record.femaleBloodTube1 || ""),
+                                "F" + (record.femaleBloodTube2 || "")
+                              );
+                            }
+                          }}
+                          className='bg-green-600 text-white hover:bg-green-700 cursor-pointer rounded-lg px-4 py-2 text-sm'>
+                          🖨️ إعادة طباعة
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredArchive.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className='border border-gray-300 px-4 py-8 text-center text-gray-500'>
+                        لا توجد سجلات
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className='mt-4 flex justify-center items-center gap-2'>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  الأولى
+                </button>
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  السابقة
+                </button>
+
+                <div className='flex gap-1'>
+                  {[...Array(totalPages)].map((_, index) => {
+                    const pageNum = index + 1;
+                    if (
+                      pageNum === 1 ||
+                      pageNum === 2 ||
+                      pageNum === totalPages ||
+                      pageNum === totalPages - 1 ||
+                      Math.abs(pageNum - currentPage) <= 1
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-2 rounded-lg ${
+                            currentPage === pageNum
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 hover:bg-gray-300"
+                          }`}>
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (pageNum === 3 || pageNum === totalPages - 2) {
+                      return (
+                        <span key={pageNum} className='px-2'>
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  التالية
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className='px-3 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'>
+                  الأخيرة
+                </button>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div className='mt-6 flex justify-center'>
+              <button
+                onClick={() => setShowArchive(false)}
+                className='bg-gray-500 text-white hover:bg-gray-600 cursor-pointer rounded-lg px-8 py-3 text-lg'>
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

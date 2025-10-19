@@ -3,9 +3,16 @@ import {
   addBloodDrawData,
   getBloodDrawData,
   generateTubeNumbers,
+  getAllBloodDrawDataController,
 } from "../controllers/bloodDraw.controller";
 
 const router = Router();
+
+/**
+ * GET /api/blood-draw/all
+ * جلب جميع سجلات سحب الدم (للأرشيف)
+ */
+router.get("/all", getAllBloodDrawDataController);
 
 /**
  * POST /api/blood-draw

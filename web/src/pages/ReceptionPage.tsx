@@ -1482,39 +1482,51 @@ const ReceptionPage = () => {
       {/* Modal للأدوار الملغاة */}
       {showCancelledModal && (
         <div
-          className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+          className='fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50'
           onClick={() => setShowCancelledModal(false)}>
           <div
-            className='bg-white rounded-lg shadow-2xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden'
+            className='bg-white rounded-2xl shadow-2xl w-[95%] max-w-6xl max-h-[85vh] overflow-hidden'
             onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className='bg-red-600 text-white p-4 flex items-center justify-between'>
-              <h2 className='text-xl font-bold flex items-center gap-2'>
-                🔄 الأدوار الملغاة اليوم ({cancelledQueues.length})
-              </h2>
+            <div className='bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-5 flex items-center justify-between'>
+              <div className='flex items-center gap-3'>
+                <div className='bg-white bg-opacity-20 p-2 rounded-lg'>
+                  <span className='text-3xl'>🔄</span>
+                </div>
+                <div>
+                  <h2 className='text-2xl font-bold'>الأدوار الملغاة اليوم</h2>
+                  <p className='text-sm text-red-100 mt-1'>
+                    إجمالي الأدوار الملغاة: {cancelledQueues.length}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowCancelledModal(false)}
-                className='text-white hover:text-gray-200 text-2xl font-bold transition'>
+                className='text-white hover:bg-white hover:bg-opacity-20 rounded-full w-10 h-10 flex items-center justify-center text-3xl font-bold transition duration-200'
+                title='إغلاق'>
                 ×
               </button>
             </div>
 
             {/* Content */}
-            <div className='p-4 overflow-y-auto max-h-[calc(90vh-80px)]'>
+            <div className='p-6 overflow-y-auto max-h-[calc(85vh-160px)] bg-gray-50'>
               {loadingCancelled ? (
-                <div className='text-center py-8'>
-                  <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto'></div>
-                  <p className='mt-4 text-gray-600'>جاري التحميل...</p>
-                </div>
-              ) : cancelledQueues.length === 0 ? (
-                <div className='text-center py-12'>
-                  <div className='text-6xl mb-4'>✅</div>
-                  <p className='text-xl text-gray-600'>
-                    لا توجد أدوار ملغاة اليوم
+                <div className='text-center py-16'>
+                  <div className='animate-spin rounded-full h-16 w-16 border-4 border-red-600 border-t-transparent mx-auto'></div>
+                  <p className='mt-6 text-lg text-gray-600 font-semibold'>
+                    جاري التحميل...
                   </p>
                 </div>
+              ) : cancelledQueues.length === 0 ? (
+                <div className='text-center py-20'>
+                  <div className='text-8xl mb-6'>✅</div>
+                  <p className='text-2xl font-bold text-gray-700 mb-2'>
+                    لا توجد أدوار ملغاة اليوم
+                  </p>
+                  <p className='text-gray-500'>جميع الأدوار نشطة</p>
+                </div>
               ) : (
-                <div className='space-y-3'>
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   {cancelledQueues.map((queue) => {
                     const receptionData = queue.ReceptionData;
                     const patientName =
@@ -1528,81 +1540,82 @@ const ReceptionPage = () => {
                     return (
                       <div
                         key={queue.id}
-                        className='border-2 border-gray-300 rounded-lg p-4 hover:shadow-lg transition-all duration-200 bg-gray-50'>
-                        <div className='flex items-center justify-between'>
-                          {/* معلومات الدور */}
-                          <div className='flex-1'>
-                            <div className='flex items-center gap-3 mb-2'>
-                              <span className='bg-red-600 text-white px-4 py-2 rounded-lg text-xl font-bold'>
-                                #{queue.queueNumber}
-                              </span>
-                              <div>
-                                <h3 className='text-lg font-bold text-gray-800'>
-                                  {patientName}
-                                </h3>
-                                <p className='text-sm text-gray-600'>
-                                  ID: {queue.patientId}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className='grid grid-cols-2 gap-2 text-sm mt-3'>
-                              <div className='flex items-center gap-2'>
-                                <span className='font-semibold text-gray-700'>
-                                  المحطة:
-                                </span>
-                                <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded'>
-                                  {queue.currentStation.name}
-                                </span>
-                              </div>
-                              <div className='flex items-center gap-2'>
-                                <span className='font-semibold text-gray-700'>
-                                  الوقت:
-                                </span>
-                                <span className='text-gray-600'>
-                                  {new Date(queue.createdAt).toLocaleTimeString(
-                                    "ar-SA",
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )}
-                                </span>
-                              </div>
-                              {queue.priority === 1 && (
-                                <div className='col-span-2'>
-                                  <span className='bg-orange-500 text-white px-2 py-1 rounded text-xs'>
-                                    مُستعجل
-                                  </span>
-                                </div>
-                              )}
-                              {queue.notes && (
-                                <div className='col-span-2'>
-                                  <span className='font-semibold text-gray-700'>
-                                    ملاحظات:
-                                  </span>
-                                  <p className='text-gray-600 text-xs mt-1'>
-                                    {queue.notes}
-                                  </p>
-                                </div>
-                              )}
+                        className='border-2 border-gray-200 rounded-xl p-5 hover:shadow-xl hover:border-red-300 transition-all duration-200 bg-white'>
+                        {/* رأس البطاقة */}
+                        <div className='flex items-start justify-between mb-4 pb-3 border-b-2 border-gray-100'>
+                          <div className='flex items-center gap-3'>
+                            <span className='bg-gradient-to-br from-red-600 to-red-700 text-white px-5 py-3 rounded-xl text-2xl font-bold shadow-lg'>
+                              #{queue.queueNumber}
+                            </span>
+                            <div>
+                              <h3 className='text-xl font-bold text-gray-800 mb-1'>
+                                {patientName}
+                              </h3>
+                              <p className='text-sm text-gray-500 font-mono'>
+                                ID: {queue.patientId}
+                              </p>
                             </div>
                           </div>
-
-                          {/* زر إعادة الطباعة */}
-                          <div className='mr-4'>
-                            <button
-                              onClick={() =>
-                                handleReinstateQueue(
-                                  queue.id,
-                                  queue.queueNumber
-                                )
-                              }
-                              className='bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition duration-200 shadow-lg hover:shadow-xl flex items-center gap-2'>
-                              🖨️ إعادة طباعة
-                            </button>
-                          </div>
+                          {queue.priority === 1 && (
+                            <span className='bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md'>
+                              ⚡ مُستعجل
+                            </span>
+                          )}
                         </div>
+
+                        {/* تفاصيل الدور */}
+                        <div className='space-y-3 mb-4'>
+                          <div className='flex items-center gap-3'>
+                            <span className='text-blue-600 text-xl'>🏥</span>
+                            <div className='flex-1'>
+                              <span className='text-xs text-gray-500 block mb-1'>
+                                المحطة
+                              </span>
+                              <span className='bg-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-sm font-semibold'>
+                                {queue.currentStation.name}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className='flex items-center gap-3'>
+                            <span className='text-gray-600 text-xl'>🕐</span>
+                            <div>
+                              <span className='text-xs text-gray-500 block mb-1'>
+                                وقت الإلغاء
+                              </span>
+                              <span className='text-gray-700 font-semibold'>
+                                {new Date(queue.createdAt).toLocaleTimeString(
+                                  "ar-SA",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {queue.notes && (
+                            <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-3'>
+                              <span className='text-xs text-gray-500 block mb-1'>
+                                📝 ملاحظات
+                              </span>
+                              <p className='text-gray-700 text-sm'>
+                                {queue.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* زر إعادة الطباعة */}
+                        <button
+                          onClick={() =>
+                            handleReinstateQueue(queue.id, queue.queueNumber)
+                          }
+                          className='w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-3.5 rounded-xl font-bold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-lg'>
+                          <span className='text-2xl'>🖨️</span>
+                          إعادة طباعة الدور
+                        </button>
                       </div>
                     );
                   })}
@@ -1611,10 +1624,13 @@ const ReceptionPage = () => {
             </div>
 
             {/* Footer */}
-            <div className='bg-gray-100 p-4 flex justify-end gap-3 border-t'>
+            <div className='bg-white border-t-2 border-gray-200 px-6 py-4 flex justify-between items-center'>
+              <p className='text-sm text-gray-600'>
+                💡 اضغط على "إعادة طباعة" لإنشاء دور جديد للمراجع
+              </p>
               <button
                 onClick={() => setShowCancelledModal(false)}
-                className='bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-semibold transition duration-200'>
+                className='bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-xl font-bold transition duration-200 shadow-lg hover:shadow-xl'>
                 إغلاق
               </button>
             </div>

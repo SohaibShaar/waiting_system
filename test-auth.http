@@ -1,0 +1,56 @@
+### اختبار التحقق من كلمة المرور - صفحة الاستقبال
+POST http://localhost:3003/api/auth/verify-page
+Content-Type: application/json
+
+{
+  "pageName": "reception",
+  "password": "r123"
+}
+
+###
+
+### اختبار كلمة المرور العامة
+POST http://localhost:3003/api/auth/verify-page
+Content-Type: application/json
+
+{
+  "pageName": "reception",
+  "password": "admin123"
+}
+
+###
+
+### اختبار كلمة مرور خاطئة
+POST http://localhost:3003/api/auth/verify-page
+Content-Type: application/json
+
+{
+  "pageName": "reception",
+  "password": "wrong_password"
+}
+
+###
+
+### جلب جميع كلمات المرور
+GET http://localhost:3003/api/auth/passwords
+
+###
+
+### تحديث كلمة مرور صفحة الاستقبال (مثال)
+# PUT http://localhost:3003/api/auth/page-password/reception
+# Content-Type: application/json
+# 
+# {
+#   "newPassword": "new_reception_password"
+# }
+
+###
+
+### تحديث كلمة المرور العامة (مثال)
+# PUT http://localhost:3003/api/auth/master-password
+# Content-Type: application/json
+# 
+# {
+#   "newPassword": "new_master_password"
+# }
+

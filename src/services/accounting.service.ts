@@ -79,8 +79,28 @@ async function updateAccountingData(
   });
 }
 
+/**
+ * جلب جميع سجلات المحاسبة (للأرشيف)
+ */
+async function getAllAccountingData() {
+  return await prisma.accountingData.findMany({
+    include: {
+      patient: true,
+      queue: {
+        include: {
+          ReceptionData: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
 export {
   createAccountingData,
   getAccountingDataByQueueId,
   updateAccountingData,
+  getAllAccountingData,
 };

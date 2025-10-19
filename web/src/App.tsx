@@ -6,6 +6,7 @@ import LabPage from "./pages/CheckDoctorPage";
 import BloodDrawPage from "./pages/BloodDrawPage";
 import DoctorPage from "./pages/DoctorPage";
 import PatientDetailsPage from "./pages/PatientDetailsPage";
+import PasswordProtectedRoute from "./components/PasswordProtectedRoute";
 import "./App.css";
 
 function App() {
@@ -14,12 +15,54 @@ function App() {
       <Routes>
         <Route path='/' element={<HomePage />} />
         <Route path='/display' element={<DisplayScreen />} />
-        <Route path='/reception' element={<ReceptionPage />} />
-        <Route path='/accounting' element={<AccountingPage />} />
-        <Route path='/lab' element={<LabPage />} />
-        <Route path='/blood-draw' element={<BloodDrawPage />} />
-        <Route path='/doctor' element={<DoctorPage />} />
-        <Route path='/doctor/patient/:id' element={<PatientDetailsPage />} />
+        <Route
+          path='/reception'
+          element={
+            <PasswordProtectedRoute pageName='reception'>
+              <ReceptionPage />
+            </PasswordProtectedRoute>
+          }
+        />
+        <Route
+          path='/accounting'
+          element={
+            <PasswordProtectedRoute pageName='accounting'>
+              <AccountingPage />
+            </PasswordProtectedRoute>
+          }
+        />
+        <Route
+          path='/lab'
+          element={
+            <PasswordProtectedRoute pageName='lab'>
+              <LabPage />
+            </PasswordProtectedRoute>
+          }
+        />
+        <Route
+          path='/blood-draw'
+          element={
+            <PasswordProtectedRoute pageName='blood-draw'>
+              <BloodDrawPage />
+            </PasswordProtectedRoute>
+          }
+        />
+        <Route
+          path='/doctor'
+          element={
+            <PasswordProtectedRoute pageName='doctor'>
+              <DoctorPage />
+            </PasswordProtectedRoute>
+          }
+        />
+        <Route
+          path='/doctor/patient/:id'
+          element={
+            <PasswordProtectedRoute pageName='doctor'>
+              <PatientDetailsPage />
+            </PasswordProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );
