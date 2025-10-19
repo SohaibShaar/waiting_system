@@ -4,9 +4,8 @@ import axios from "axios";
 import Header from "../components/Header";
 import { useQueueUpdates } from "../hooks/useQueueUpdates";
 import printQueueNumber from "../utils/queuePrinter";
-import { API_BASE_URL } from "../services/api";
 
-const API_URL = API_BASE_URL;
+const API_URL = "http://192.168.1.100:3003/api";
 
 interface ReceptionData {
   id: number;

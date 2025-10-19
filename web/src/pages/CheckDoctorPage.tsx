@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
-import { API_BASE_URL } from "../services/api";
 
-const API_URL = API_BASE_URL;
+const API_URL = "http://192.168.1.100:3003/api";
 const STATION_DISPLAY_NUMBER = 3;
 
 interface CurrentPatient {
