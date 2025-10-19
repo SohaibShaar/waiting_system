@@ -243,10 +243,40 @@ async function saveCompletedPatientData(queueId: number, patientId: number) {
 }
 
 /**
- * الحصول على جميع البيانات المكتملة
+ * الحصول على جميع البيانات المكتملة مع الفلترة والـ pagination
  */
-async function getAllCompletedPatientData() {
-  const data = await prisma.completedPatientData.findMany({
+async function getAllCompletedPatientData(filters?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  queueId?: number;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 20;
+  const skip = (page - 1) * limit;
+
+  // Build where clause
+  const where: any = {};
+
+  if (filters?.queueId) {
+    where.queueId = filters.queueId;
+  }
+
+  if (filters?.startDate || filters?.endDate) {
+    where.completedAt = {};
+    if (filters.startDate) {
+      where.completedAt.gte = new Date(filters.startDate);
+    }
+    if (filters.endDate) {
+      where.completedAt.lte = new Date(filters.endDate);
+    }
+  }
+
+  // Get all data first for search filtering (if needed)
+  let allData = await prisma.completedPatientData.findMany({
+    where,
     include: {
       patient: true,
     },
@@ -255,8 +285,8 @@ async function getAllCompletedPatientData() {
     },
   });
 
-  // تحويل البيانات من JSON strings
-  return data.map((item) => ({
+  // Parse JSON and apply search filter
+  let parsedData = allData.map((item) => ({
     ...item,
     ReceptionData: item.receptionData ? JSON.parse(item.receptionData) : null,
     AccountingData: item.accountingData
@@ -266,18 +296,204 @@ async function getAllCompletedPatientData() {
     LabData: item.labData ? JSON.parse(item.labData) : null,
     DoctorData: item.doctorData ? JSON.parse(item.doctorData) : null,
   }));
+
+  // Apply search filter on parsed data
+  if (filters?.search) {
+    const searchLower = filters.search.toLowerCase();
+    parsedData = parsedData.filter((item) => {
+      const reception = item.ReceptionData;
+
+      // Search in queue ID, patient ID
+      if (
+        item.queueId.toString().includes(searchLower) ||
+        item.patientId.toString().includes(searchLower) ||
+        item.patient?.id.toString().includes(searchLower)
+      ) {
+        return true;
+      }
+
+      // Search in reception data if exists
+      if (!reception) return false;
+
+      return (
+        reception.maleName?.toLowerCase().includes(searchLower) ||
+        reception.maleLastName?.toLowerCase().includes(searchLower) ||
+        reception.femaleName?.toLowerCase().includes(searchLower) ||
+        reception.femaleLastName?.toLowerCase().includes(searchLower) ||
+        reception.maleNationalId?.toLowerCase().includes(searchLower) ||
+        reception.femaleNationalId?.toLowerCase().includes(searchLower)
+      );
+    });
+  }
+
+  const total = parsedData.length;
+  const paginatedData = parsedData.slice(skip, skip + limit);
+
+  return {
+    data: paginatedData,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 }
 
 /**
  * الحصول على البيانات المكتملة لمريض معين
  */
 async function getCompletedPatientDataById(id: number) {
-  return await prisma.completedPatientData.findUnique({
+  const data = await prisma.completedPatientData.findUnique({
     where: { id },
     include: {
       patient: true,
     },
   });
+
+  if (!data) return null;
+
+  // Parse JSON strings
+  return {
+    ...data,
+    ReceptionData: data.receptionData ? JSON.parse(data.receptionData) : null,
+    AccountingData: data.accountingData
+      ? JSON.parse(data.accountingData)
+      : null,
+    BloodDrawData: data.bloodDrawData ? JSON.parse(data.bloodDrawData) : null,
+    LabData: data.labData ? JSON.parse(data.labData) : null,
+    DoctorData: data.doctorData ? JSON.parse(data.doctorData) : null,
+  };
+}
+
+/**
+ * تحديث البيانات المكتملة (ReceptionData فقط)
+ */
+async function updateCompletedPatientData(
+  id: number,
+  receptionData: {
+    maleName?: string;
+    maleLastName?: string;
+    maleFatherName?: string;
+    maleMotherName?: string;
+    maleNationalId?: string;
+    maleBirthPlace?: string;
+    maleRegistration?: string;
+    maleBirthDate?: string;
+    maleAge?: number;
+    femaleName?: string;
+    femaleLastName?: string;
+    femaleFatherName?: string;
+    femaleMotherName?: string;
+    femaleNationalId?: string;
+    femaleBirthPlace?: string;
+    femaleRegistration?: string;
+    femaleBirthDate?: string;
+    femaleAge?: number;
+  }
+) {
+  // Get existing data
+  const existing = await prisma.completedPatientData.findUnique({
+    where: { id },
+  });
+
+  if (!existing || !existing.receptionData) {
+    throw new Error("البيانات غير موجودة");
+  }
+
+  // Parse existing reception data
+  const existingReception = JSON.parse(existing.receptionData);
+
+  // Merge with new data
+  const updatedReception = {
+    ...existingReception,
+    ...receptionData,
+  };
+
+  // Update
+  const updated = await prisma.completedPatientData.update({
+    where: { id },
+    data: {
+      receptionData: JSON.stringify(updatedReception),
+    },
+  });
+
+  return {
+    ...updated,
+    ReceptionData: updatedReception,
+  };
+}
+
+/**
+ * تحديث بيانات الطبيب في CompletedPatientData
+ */
+async function updateCompletedPatientDoctorData(
+  id: number,
+  doctorData: {
+    maleBloodType?: string;
+    femaleBloodType?: string;
+    maleHIVstatus?: DiseasesStatus;
+    femaleHIVstatus?: DiseasesStatus;
+    maleHBSstatus?: DiseasesStatus;
+    femaleHBSstatus?: DiseasesStatus;
+    maleHBCstatus?: DiseasesStatus;
+    femaleHBCstatus?: DiseasesStatus;
+    maleHIVvalue?: string;
+    femaleHIVvalue?: string;
+    maleHBSvalue?: string;
+    femaleHBSvalue?: string;
+    maleHBCvalue?: string;
+    femaleHBCvalue?: string;
+    maleHemoglobinEnabled?: boolean;
+    maleHbS?: string;
+    maleHbF?: string;
+    maleHbA1c?: string;
+    maleHbA2?: string;
+    maleHbSc?: string;
+    maleHbD?: string;
+    maleHbE?: string;
+    maleHbC?: string;
+    femaleHemoglobinEnabled?: boolean;
+    femaleHbS?: string;
+    femaleHbF?: string;
+    femaleHbA1c?: string;
+    femaleHbA2?: string;
+    femaleHbSc?: string;
+    femaleHbD?: string;
+    femaleHbE?: string;
+    femaleHbC?: string;
+    maleNotes?: string;
+    femaleNotes?: string;
+    notes?: string;
+  }
+) {
+  // Get existing data
+  const existing = await prisma.completedPatientData.findUnique({
+    where: { id },
+  });
+
+  if (!existing || !existing.doctorData) {
+    throw new Error("البيانات غير موجودة");
+  }
+
+  // Parse existing doctor data
+  const existingDoctor = JSON.parse(existing.doctorData);
+
+  // Merge with new data
+  const updatedDoctor = {
+    ...existingDoctor,
+    ...doctorData,
+  };
+
+  // Update
+  const updated = await prisma.completedPatientData.update({
+    where: { id },
+    data: {
+      doctorData: JSON.stringify(updatedDoctor),
+    },
+  });
+
+  return {
+    ...updated,
+    DoctorData: updatedDoctor,
+  };
 }
 
 export {
@@ -287,4 +503,6 @@ export {
   saveCompletedPatientData,
   getAllCompletedPatientData,
   getCompletedPatientDataById,
+  updateCompletedPatientData,
+  updateCompletedPatientDoctorData,
 };

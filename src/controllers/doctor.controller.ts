@@ -7,6 +7,8 @@ import {
   saveCompletedPatientData,
   getAllCompletedPatientData,
   getCompletedPatientDataById,
+  updateCompletedPatientData,
+  updateCompletedPatientDoctorData,
 } from "../services/doctor.service";
 import { emitQueueUpdate, emitQueueCompleted, emitScreenDataUpdate } from "..";
 
@@ -232,16 +234,34 @@ export async function updateDoctorDataController(req: Request, res: Response) {
 }
 
 /**
- * الحصول على جميع البيانات المكتملة
+ * الحصول على جميع البيانات المكتملة مع الفلترة والـ pagination
  * GET /api/doctor/completed
  */
 export async function getCompletedData(req: Request, res: Response) {
   try {
-    const completedData = await getAllCompletedPatientData();
+    const { page, limit, search, queueId, startDate, endDate } = req.query;
+
+    const filters: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      queueId?: number;
+      startDate?: string;
+      endDate?: string;
+    } = {};
+
+    if (page) filters.page = parseInt(page as string);
+    if (limit) filters.limit = parseInt(limit as string);
+    if (search) filters.search = search as string;
+    if (queueId) filters.queueId = parseInt(queueId as string);
+    if (startDate) filters.startDate = startDate as string;
+    if (endDate) filters.endDate = endDate as string;
+
+    const result = await getAllCompletedPatientData(filters);
 
     res.json({
       success: true,
-      data: completedData,
+      ...result,
     });
   } catch (error: any) {
     res.status(500).json({
@@ -278,6 +298,72 @@ export async function getCompletedDataById(req: Request, res: Response) {
     res.json({
       success: true,
       data: completedData,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * تحديث البيانات المكتملة (ReceptionData)
+ * PUT /api/doctor/completed/:id
+ */
+export async function updateCompletedDataController(
+  req: Request,
+  res: Response
+) {
+  try {
+    const id = parseInt(req.params.id as string);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        error: "المعرف غير صالح",
+      });
+    }
+
+    const updatedData = await updateCompletedPatientData(id, req.body);
+
+    res.json({
+      success: true,
+      data: updatedData,
+      message: "تم تحديث البيانات بنجاح",
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * تحديث بيانات الطبيب في البيانات المكتملة
+ * PUT /api/doctor/completed/:id/doctor
+ */
+export async function updateCompletedDoctorDataController(
+  req: Request,
+  res: Response
+) {
+  try {
+    const id = parseInt(req.params.id as string);
+
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        error: "المعرف غير صالح",
+      });
+    }
+
+    const updatedData = await updateCompletedPatientDoctorData(id, req.body);
+
+    res.json({
+      success: true,
+      data: updatedData,
+      message: "تم تحديث بيانات الطبيب بنجاح",
     });
   } catch (error: any) {
     res.status(500).json({

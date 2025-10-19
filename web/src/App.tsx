@@ -5,6 +5,7 @@ import AccountingPage from "./pages/AccountingPage";
 import LabPage from "./pages/CheckDoctorPage";
 import BloodDrawPage from "./pages/BloodDrawPage";
 import DoctorPage from "./pages/DoctorPage";
+import PatientDetailsPage from "./pages/PatientDetailsPage";
 import "./App.css";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path='/lab' element={<LabPage />} />
         <Route path='/blood-draw' element={<BloodDrawPage />} />
         <Route path='/doctor' element={<DoctorPage />} />
+        <Route path='/doctor/patient/:id' element={<PatientDetailsPage />} />
       </Routes>
     </Router>
   );

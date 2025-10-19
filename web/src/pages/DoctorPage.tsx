@@ -78,8 +78,16 @@ const DoctorPage = () => {
         femaleLastName: string;
         phoneNumber?: string;
       };
+      LabData?: {
+        isMaleHealthy: string;
+        isFemaleHealthy: string;
+      };
     }>
   >([]); // البيانات المكتملة
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   // مرجع للتمرير إلى أعلى المحتوى
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -241,12 +249,20 @@ const DoctorPage = () => {
   const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
   // تحميل قائمة البيانات المكتملة
-  const loadCompletedData = async () => {
+  const loadCompletedData = async (page = 1, search = "") => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/doctor/completed`);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "20",
+        ...(search && { search }),
+      });
+      const response = await axios.get(`${API_URL}/doctor/completed?${params}`);
       if (response.data.success) {
         setCompletedData(response.data.data);
+        setTotalPages(response.data.totalPages);
+        setTotalCount(response.data.total);
+        setCurrentPage(page);
         setShowCompletedList(true);
       }
     } catch (error) {
@@ -256,6 +272,16 @@ const DoctorPage = () => {
       setLoading(false);
     }
   };
+
+  // Handle search with debounce
+  useEffect(() => {
+    if (showCompletedList) {
+      const timer = setTimeout(() => {
+        loadCompletedData(1, searchTerm);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm, showCompletedList]);
 
   return (
     <div
@@ -287,7 +313,7 @@ const DoctorPage = () => {
                   </p>
                 </div>
                 <button
-                  onClick={loadCompletedData}
+                  onClick={() => loadCompletedData()}
                   disabled={loading}
                   className='btn-primary px-8 py-3 text-lg disabled:opacity-50'
                   style={{ backgroundColor: "var(--accent)" }}>
@@ -303,69 +329,160 @@ const DoctorPage = () => {
                 <h2
                   className='text-2xl font-bold'
                   style={{ color: "var(--primary)" }}>
-                  📋 قائمة الحالات المكتملة
+                  📋 قائمة الحالات المكتملة ({totalCount})
                 </h2>
                 <button
-                  onClick={() => setShowCompletedList(false)}
+                  onClick={() => {
+                    setShowCompletedList(false);
+                    setSearchTerm("");
+                    setCurrentPage(1);
+                  }}
                   className='bg-gray-500 text-white hover:opacity-80 cursor-pointer rounded-lg py-2 px-6'>
                   ❌ إغلاق
                 </button>
               </div>
 
+              {/* Filters */}
+              <div className='mb-6'>
+                <input
+                  type='text'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder='🔍 بحث بالاسم، الرقم الوطني، ID المريض، أو رقم الدور...'
+                  className='input-field w-full'
+                  style={{ fontSize: "16px" }}
+                />
+              </div>
+
               {completedData.length === 0 ? (
                 <div className='text-center py-12'>
                   <p className='text-lg' style={{ color: "var(--dark)" }}>
-                    لا توجد حالات مكتملة بعد
+                    {searchTerm
+                      ? "لا توجد نتائج للبحث"
+                      : "لا توجد حالات مكتملة بعد"}
                   </p>
                 </div>
               ) : (
-                <div className='overflow-y-auto max-h-[calc(100vh-300px)]'>
-                  <table className='w-full'>
-                    <thead>
-                      <tr style={{ backgroundColor: "var(--light)" }}>
-                        <th className='p-3 text-right'>رقم الدور</th>
-                        <th className='p-3 text-right'>رقم الـ ID</th>
-                        <th className='p-3 text-right'>اسم الخطيب</th>
-                        <th className='p-3 text-right'>اسم الخطيبة</th>
-                        <th className='p-3 text-right'>تاريخ الإكمال</th>
-                        <th className='p-3 text-center'>إجراءات</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {completedData.map((item) => (
-                        <tr key={item.id} className='border-b hover:bg-gray-50'>
-                          <td className='p-3'>#{item.queueId}</td>
-                          <td className='p-3'>
-                            {item.patient?.id.toString() || "غير متوفر"}
-                          </td>
-                          <td className='p-3'>
-                            {item.ReceptionData?.maleName || "غير متوفر"}{" "}
-                            {item.ReceptionData?.maleLastName || "غير متوفر"}
-                          </td>
-                          <td className='p-3'>
-                            {item.ReceptionData?.femaleName || "غير متوفر"}{" "}
-                            {item.ReceptionData?.femaleLastName || "غير متوفر"}
-                          </td>
-                          <td className='p-3'>
-                            {new Date(item.completedAt).toLocaleDateString(
-                              "ar-SY"
-                            )}
-                          </td>
-                          <td className='p-3 text-center'>
-                            <button
-                              onClick={() => {
-                                // سيتم تخصيص الطباعة لاحقاً
-                                alert("سيتم تخصيص وظيفة الطباعة لاحقاً");
-                              }}
-                              className='btn-primary px-4 py-2 text-sm'>
-                              🖨️ طباعة
-                            </button>
-                          </td>
+                <>
+                  <div className='overflow-x-auto'>
+                    <table className='w-full'>
+                      <thead>
+                        <tr style={{ backgroundColor: "var(--light)" }}>
+                          <th className='p-3 text-right'>رقم الدور</th>
+                          <th className='p-3 text-right'>رقم الـ ID</th>
+                          <th className='p-3 text-right'>اسم الخطيب</th>
+                          <th className='p-3 text-right'>حالة الخطيب</th>
+                          <th className='p-3 text-right'>اسم الخطيبة</th>
+                          <th className='p-3 text-right'>حالة الخطيبة</th>
+                          <th className='p-3 text-right'>تاريخ الإكمال</th>
+                          <th className='p-3 text-center'>إجراءات</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {completedData.map((item) => (
+                          <tr
+                            key={item.id}
+                            className='border-b hover:bg-gray-50'>
+                            <td className='p-3'>#{item.queueId}</td>
+                            <td className='p-3'>
+                              {item.patient?.id.toString() || "غير متوفر"}
+                            </td>
+                            <td className='p-3'>
+                              {item.ReceptionData?.maleName || "غير متوفر"}{" "}
+                              {item.ReceptionData?.maleLastName || ""}
+                            </td>
+                            <td className='p-3'>
+                              {item.LabData?.isMaleHealthy === "HEALTHY" ? (
+                                <span className='px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800'>
+                                  ✓ سليم
+                                </span>
+                              ) : item.LabData?.isMaleHealthy ===
+                                "UNHEALTHY" ? (
+                                <span className='px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800'>
+                                  ✗ غير سليم
+                                </span>
+                              ) : (
+                                <span className='text-gray-400 text-xs'>
+                                  غير محدد
+                                </span>
+                              )}
+                            </td>
+                            <td className='p-3'>
+                              {item.ReceptionData?.femaleName || "غير متوفر"}{" "}
+                              {item.ReceptionData?.femaleLastName || ""}
+                            </td>
+                            <td className='p-3'>
+                              {item.LabData?.isFemaleHealthy === "HEALTHY" ? (
+                                <span className='px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800'>
+                                  ✓ سليم
+                                </span>
+                              ) : item.LabData?.isFemaleHealthy ===
+                                "UNHEALTHY" ? (
+                                <span className='px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800'>
+                                  ✗ غير سليم
+                                </span>
+                              ) : (
+                                <span className='text-gray-400 text-xs'>
+                                  غير محدد
+                                </span>
+                              )}
+                            </td>
+                            <td className='p-3'>
+                              {new Date(item.completedAt).toLocaleDateString(
+                                "ar-SY"
+                              )}
+                            </td>
+                            <td className='p-3 text-center'>
+                              <div className='flex gap-2 justify-center'>
+                                <button
+                                  onClick={() => {
+                                    window.location.href = `/doctor/patient/${item.id}`;
+                                  }}
+                                  className='btn-primary px-4 py-2 text-sm'>
+                                  👁️ عرض
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    alert("سيتم تخصيص وظيفة الطباعة لاحقاً");
+                                  }}
+                                  className='bg-gray-500 text-white hover:opacity-80 cursor-pointer rounded-lg px-4 py-2 text-sm'>
+                                  🖨️ طباعة
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className='flex justify-between items-center mt-6'>
+                      <div className='text-sm' style={{ color: "var(--dark)" }}>
+                        صفحة {currentPage} من {totalPages}
+                      </div>
+                      <div className='flex gap-2'>
+                        <button
+                          onClick={() =>
+                            loadCompletedData(currentPage - 1, searchTerm)
+                          }
+                          disabled={currentPage === 1 || loading}
+                          className='btn-primary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed'>
+                          السابق
+                        </button>
+                        <button
+                          onClick={() =>
+                            loadCompletedData(currentPage + 1, searchTerm)
+                          }
+                          disabled={currentPage === totalPages || loading}
+                          className='btn-primary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed'>
+                          التالي
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ) : currentPatient ? (

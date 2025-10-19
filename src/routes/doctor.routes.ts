@@ -5,6 +5,8 @@ import {
   updateDoctorDataController,
   getCompletedData,
   getCompletedDataById,
+  updateCompletedDataController,
+  updateCompletedDoctorDataController,
 } from "../controllers/doctor.controller";
 
 const router = Router();
@@ -26,6 +28,18 @@ router.get("/completed", getCompletedData);
  * الحصول على البيانات المكتملة لمريض معين
  */
 router.get("/completed/:id", getCompletedDataById);
+
+/**
+ * PUT /api/doctor/completed/:id
+ * تحديث البيانات المكتملة (ReceptionData)
+ */
+router.put("/completed/:id", updateCompletedDataController);
+
+/**
+ * PUT /api/doctor/completed/:id/doctor
+ * تحديث بيانات الطبيب في البيانات المكتملة
+ */
+router.put("/completed/:id/doctor", updateCompletedDoctorDataController);
 
 /**
  * GET /api/doctor/:queueId
