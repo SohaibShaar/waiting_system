@@ -3,7 +3,7 @@ import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
 
-const API_URL = "http://localhost:3003/api";
+const API_URL = "http://192.168.1.100:3003/api";
 const STATION_DISPLAY_NUMBER = 3;
 
 interface CurrentPatient {
@@ -12,12 +12,15 @@ interface CurrentPatient {
   patientId: number;
   maleName: string;
   femaleName: string;
+  priority: number;
   ReceptionData?: {
     maleName: string;
     maleLastName: string;
     femaleName: string;
     femaleLastName: string;
     phoneNumber?: string;
+    femaleStatus: string;
+    maleStatus: string;
   };
 }
 
@@ -134,6 +137,8 @@ const LabPage = () => {
             patientId: queue.patientId,
             maleName: reception?.maleName || "",
             femaleName: reception?.femaleName || "",
+            priority: queue.priority || 0, // إضافة الأولوية
+
             ReceptionData: reception,
           });
 
@@ -287,6 +292,8 @@ const LabPage = () => {
           patientId: fullQueue.patientId,
           maleName: reception?.maleName || "",
           femaleName: reception?.femaleName || "",
+          priority: fullQueue.priority || 0,
+
           ReceptionData: reception,
         });
 
@@ -379,6 +386,7 @@ const LabPage = () => {
           maleName: reception?.maleName || "",
           femaleName: reception?.femaleName || "",
           ReceptionData: reception,
+          priority: fullQueue.priority || 0, // إضافة الأولوية
         });
 
         // فحص إذا كان الدور قد تم استدعاءه (status = CALLED أو IN_PROGRESS)
@@ -546,7 +554,7 @@ const LabPage = () => {
                   <button
                     onClick={handleOpenArchive}
                     disabled={loading}
-                    className='bg-blue-600 text-white hover:bg-blue-700 cursor-pointer rounded-lg px-8 py-4 text-xl disabled:opacity-50'>
+                    className='bg-[#054239] text-white hover:bg-[#054239]/80 cursor-pointer rounded-lg px-8 py-4 text-xl disabled:opacity-50'>
                     📁 الأرشيف
                   </button>
                 </div>
@@ -568,6 +576,26 @@ const LabPage = () => {
           ) : (
             <div className='card w-full p-8 my-3'>
               {/* Patient Info */}
+              <div className=' text-right flex flex-row items-start justify-start py-4'>
+                <div className=''>
+                  {/* عرض الأولوية */}
+                  {currentPatient.priority === 1 && (
+                    <span className='text-lg font-bold text-white bg-orange-500 rounded-lg px-2 py-1 animate-pulse'>
+                      مُستعجل
+                    </span>
+                  )}
+                </div>
+                <div className=''>
+                  {currentPatient.ReceptionData?.maleStatus ===
+                    "LEGAL_INVITATION" ||
+                  currentPatient.ReceptionData?.femaleStatus ===
+                    "LEGAL_INVITATION" ? (
+                    <span className='text-lg font-bold text-white bg-red-500 rounded-lg px-2 mx-2 py-1'>
+                      دعوة شرعية
+                    </span>
+                  ) : null}
+                </div>
+              </div>
               <div
                 className='flex flex-row items-stretch justify-evenly gap-4 rounded-lg p-6 mb-6'
                 style={{ backgroundColor: "var(--light)" }}>
@@ -591,9 +619,21 @@ const LabPage = () => {
                         👨 الزوج
                       </div>
                       <div className='text-lg font-bold'>
-                        {currentPatient.ReceptionData
-                          ? `${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`
-                          : currentPatient.maleName}
+                        {currentPatient.ReceptionData &&
+                        currentPatient.ReceptionData.maleName != null ? (
+                          `${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`
+                        ) : currentPatient.ReceptionData?.maleStatus ===
+                          "NOT_EXIST" ? (
+                          <span className='text-red-500'>لا يوجد زوج</span>
+                        ) : currentPatient.ReceptionData?.maleStatus ===
+                          "OUT_OF_COUNTRY" ? (
+                          <span className='text-red-500'>خارج القطر</span>
+                        ) : currentPatient.ReceptionData?.maleStatus ===
+                          "OUT_OF_PROVINCE" ? (
+                          <span className='text-red-500'>خارج المحافظة</span>
+                        ) : (
+                          "-"
+                        )}
                       </div>
                     </div>
                   </div>
@@ -605,9 +645,21 @@ const LabPage = () => {
                       👩 الزوجة
                     </div>
                     <div className='text-lg font-bold'>
-                      {currentPatient.ReceptionData
-                        ? `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
-                        : currentPatient.femaleName}
+                      {currentPatient.ReceptionData &&
+                      currentPatient.ReceptionData.femaleName != null ? (
+                        `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
+                      ) : currentPatient.ReceptionData?.femaleStatus ===
+                        "NOT_EXIST" ? (
+                        <span className='text-red-500'>لا يوجد زوجة</span>
+                      ) : currentPatient.ReceptionData?.femaleStatus ===
+                        "OUT_OF_COUNTRY" ? (
+                        <span className='text-red-500'>خارج القطر</span>
+                      ) : currentPatient.ReceptionData?.femaleStatus ===
+                        "OUT_OF_PROVINCE" ? (
+                        <span className='text-red-500'>خارج المحافظة</span>
+                      ) : (
+                        "-"
+                      )}
                     </div>
                   </div>
                 </div>
@@ -776,48 +828,53 @@ const LabPage = () => {
                       onClick={handleSave}
                       disabled={loading || !hasBeenCalled}
                       className='btn-success py-3 text-lg disabled:opacity-50'>
-                      {loading ? " جاري الحفظ..." : " حفظ"}
+                      {loading
+                        ? " جاري الحفظ..."
+                        : isEditMode === false
+                        ? "حفظ النتيجة"
+                        : " حفظ التعديل"}
                     </button>
 
-                    {/* أزرار إعادة النداء والإلغاء */}
-                    <div className='flex gap-3'>
-                      {/* زر إعادة النداء */}
-                      {hasBeenCalled && (
+                    {isEditMode === false ? (
+                      /* أزرار إعادة النداء والإلغاء */
+                      <div className='flex gap-3'>
+                        {/* زر إعادة النداء */}
+                        {hasBeenCalled && (
+                          <button
+                            onClick={handleRecall}
+                            disabled={loading || recallCooldown > 0}
+                            className='btn-success py-3 text-lg disabled:opacity-50'>
+                            {loading
+                              ? " جاري النداء..."
+                              : recallCooldown > 0
+                              ? ` انتظر ${recallCooldown}ث`
+                              : ` إعادة النداء (${recallCount}/3)`}
+                          </button>
+                        )}
+
+                        {/* زر استدعاء الآن (فقط من القائمة) */}
+                        {isFromSidebar && !hasBeenCalled && (
+                          <button
+                            onClick={handleRecall}
+                            disabled={loading}
+                            className='btn-success py-3 text-lg disabled:opacity-50'
+                            style={{ backgroundColor: "var(--primary)" }}>
+                            {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
+                          </button>
+                        )}
+
                         <button
-                          onClick={handleRecall}
-                          disabled={loading || recallCooldown > 0}
-                          className='btn-success py-3 text-lg disabled:opacity-50'>
-                          {loading
-                            ? " جاري النداء..."
-                            : recallCooldown > 0
-                            ? ` انتظر ${recallCooldown}ث`
-                            : ` إعادة النداء (${recallCount}/3)`}
+                          onClick={handleCancelQueue}
+                          disabled={loading || recallCount < 3}
+                          className='btn-danger py-3 text-lg disabled:opacity-50'
+                          style={{
+                            backgroundColor:
+                              recallCount >= 3 ? "#dc2626" : "#9ca3af",
+                          }}>
+                          {loading ? "⏳ جاري الإلغاء..." : "لم يحضر"}
                         </button>
-                      )}
-
-                      {/* زر استدعاء الآن (فقط من القائمة) */}
-                      {isFromSidebar && !hasBeenCalled && (
-                        <button
-                          onClick={handleRecall}
-                          disabled={loading}
-                          className='btn-success py-3 text-lg disabled:opacity-50'
-                          style={{ backgroundColor: "var(--primary)" }}>
-                          {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
-                        </button>
-                      )}
-
-                      <button
-                        onClick={handleCancelQueue}
-                        disabled={loading || recallCount < 3}
-                        className='btn-danger py-3 text-lg disabled:opacity-50'
-                        style={{
-                          backgroundColor:
-                            recallCount >= 3 ? "#dc2626" : "#9ca3af",
-                        }}>
-                        {loading ? "⏳ جاري الإلغاء..." : "لم يحضر"}
-                      </button>
-                    </div>
-
+                      </div>
+                    ) : null}
                     <button
                       onClick={() => {
                         setCurrentPatient(null);

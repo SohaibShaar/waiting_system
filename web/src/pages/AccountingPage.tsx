@@ -5,7 +5,7 @@ import QueueSidebar from "../components/QueueSidebar";
 import { io } from "socket.io-client";
 import { printReceipt } from "../utils/receiptPrinter";
 
-const API_URL = "http://localhost:3003/api";
+const API_URL = "http://192.168.1.100:3003/api";
 const STATION_DISPLAY_NUMBER = 2;
 
 interface CurrentPatient {
@@ -107,7 +107,7 @@ const AccountingPage = () => {
     };
     fetchFastAddValue();
     // إضافة WebSocket listener للتحديثات الفورية
-    const socket = io("http://localhost:3003");
+    const socket = io("http://192.168.1.100:3003");
 
     socket.on("fast-price-updated", (data: { value: number }) => {
       console.log("✅ تم استلام تحديث FastPrice:", data.value);
@@ -579,7 +579,9 @@ const AccountingPage = () => {
           year: "numeric",
         }) || "-",
         currentPatient.ReceptionData?.femaleRegistration || "-",
-        dateString
+        dateString,
+        currentPatient.ReceptionData?.maleStatus,
+        currentPatient.ReceptionData?.femaleStatus
       );
       console.log("✅ تم إرسال الإيصال للطباعة");
     } catch (error) {
@@ -686,7 +688,7 @@ const AccountingPage = () => {
                   <button
                     onClick={handleOpenArchive}
                     disabled={loading}
-                    className='bg-blue-600 text-white hover:bg-blue-700 cursor-pointer rounded-lg px-8 py-4 text-xl disabled:opacity-50'>
+                    className='bg-[#054239] text-white hover:bg-[#054239]/80 cursor-pointer rounded-lg px-8 py-4 text-xl disabled:opacity-50'>
                     📁 الأرشيف
                   </button>
                 </div>
@@ -929,47 +931,51 @@ const AccountingPage = () => {
                       onClick={handleSave}
                       disabled={loading || !isPaid || !amount || !hasBeenCalled}
                       className='btn-success py-3 text-lg disabled:opacity-50'>
-                      {loading ? "⏳ جاري الحفظ..." : "تأكيد الدفع"}
+                      {loading
+                        ? "⏳ جاري الحفظ..."
+                        : isEditMode === false
+                        ? "تأكيد الدفع"
+                        : "حفظ التعديل"}
                     </button>
 
-                    {/* أزرار إعادة النداء والإلغاء */}
-                    <div className='flex gap-3'>
-                      {/* زر إعادة النداء */}
-                      {hasBeenCalled && (
+                    {isEditMode === false ? (
+                      /* أزرار إعادة النداء والإلغاء */
+                      <div className='flex gap-3'>
+                        {/* زر إعادة النداء */}
+                        {hasBeenCalled && (
+                          <button
+                            onClick={handleRecall}
+                            disabled={loading || recallCooldown > 0}
+                            className='btn-success py-3 text-lg disabled:opacity-50'>
+                            {loading
+                              ? " جاري النداء..."
+                              : recallCooldown > 0
+                              ? ` انتظر ${recallCooldown} ث`
+                              : ` إعادة النداء (${recallCount}/3)`}
+                          </button>
+                        )}
+                        {/* زر استدعاء الآن (فقط من القائمة) */}
+                        {isFromSidebar && !hasBeenCalled && (
+                          <button
+                            onClick={handleRecall}
+                            disabled={loading}
+                            className='btn-success py-3 text-lg disabled:opacity-50'
+                            style={{ backgroundColor: "var(--primary)" }}>
+                            {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
+                          </button>
+                        )}
                         <button
-                          onClick={handleRecall}
-                          disabled={loading || recallCooldown > 0}
-                          className='btn-success py-3 text-lg disabled:opacity-50'>
-                          {loading
-                            ? " جاري النداء..."
-                            : recallCooldown > 0
-                            ? ` انتظر ${recallCooldown} ث`
-                            : ` إعادة النداء (${recallCount}/3)`}
+                          onClick={handleCancelQueue}
+                          disabled={loading || recallCount < 3}
+                          className='btn-danger py-3 text-lg disabled:opacity-50'
+                          style={{
+                            backgroundColor:
+                              recallCount >= 3 ? "#dc2626" : "#9ca3af",
+                          }}>
+                          {loading ? "⏳ جاري الإلغاء..." : " لم يحضر"}
                         </button>
-                      )}
-
-                      {/* زر استدعاء الآن (فقط من القائمة) */}
-                      {isFromSidebar && !hasBeenCalled && (
-                        <button
-                          onClick={handleRecall}
-                          disabled={loading}
-                          className='btn-success py-3 text-lg disabled:opacity-50'
-                          style={{ backgroundColor: "var(--primary)" }}>
-                          {loading ? " جاري الاستدعاء..." : " استدعاء الآن"}
-                        </button>
-                      )}
-
-                      <button
-                        onClick={handleCancelQueue}
-                        disabled={loading || recallCount < 3}
-                        className='btn-danger py-3 text-lg disabled:opacity-50'
-                        style={{
-                          backgroundColor:
-                            recallCount >= 3 ? "#dc2626" : "#9ca3af",
-                        }}>
-                        {loading ? "⏳ جاري الإلغاء..." : " لم يحضر"}
-                      </button>
-                    </div>
+                      </div>
+                    ) : null}
 
                     <button
                       onClick={() => {
@@ -1180,7 +1186,9 @@ const AccountingPage = () => {
                                       year: "numeric",
                                     }) || "-",
                                     reception?.femaleRegistration || "-",
-                                    dateString
+                                    dateString,
+                                    reception?.maleStatus,
+                                    reception?.femaleStatus
                                   );
                                   console.log("✅ تم إرسال الإيصال للطباعة");
                                 }

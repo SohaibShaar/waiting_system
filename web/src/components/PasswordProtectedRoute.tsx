@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
-const API_URL = "http://localhost:3003/api";
+const API_URL = "http://192.168.1.100:3003/api";
 
 interface PasswordProtectedRouteProps {
   pageName: string;
@@ -81,7 +82,7 @@ const PasswordProtectedRoute = ({
 
   return (
     <div
-      className='fixed inset-0 flex items-center justify-center'
+      className='fixed flex-col inset-0 flex items-center justify-center'
       style={{
         background: "linear-gradient(135deg, #054239 0%, #0a6b5a 100%)",
       }}>
@@ -108,14 +109,16 @@ const PasswordProtectedRoute = ({
         </div>
 
         {/* العنوان */}
-        <h2
-          className='text-2xl font-bold text-center mb-2'
-          style={{ color: "#054239" }}>
-          صفحة محمية
-        </h2>
-        <p className='text-center text-gray-600 mb-6'>
-          الرجاء إدخال كلمة المرور للدخول
-        </p>
+        <div className='flex flex-col items-center justify-center'>
+          <h2
+            className='text-2xl font-bold text-center mb-2'
+            style={{ color: "#054239" }}>
+            صفحة محمية
+          </h2>
+          <p className='text-center text-gray-600 mb-6'>
+            الرجاء إدخال كلمة المرور للدخول
+          </p>
+        </div>
 
         {/* النموذج */}
         <form onSubmit={handleSubmit} className='space-y-4'>
@@ -177,18 +180,19 @@ const PasswordProtectedRoute = ({
                 جاري التحقق...
               </span>
             ) : (
-              "دخول"
+              <span className='flex items-center justify-center gap-2'>
+                دخول
+              </span>
             )}
           </button>
         </form>
-
-        {/* معلومات إضافية */}
-        <div className='mt-6 text-center'>
-          <p className='text-xs text-gray-500'>
-            💡 يمكن استخدام كلمة المرور العامة للدخول إلى جميع الصفحات
-          </p>
-        </div>
       </div>
+      <span className='flex flex-col justify-center items-center text-white text-sm mt-4'>
+        نقابة الأطباء © مخبر ما قبل الزواج - حماة
+        <a target='_blank' href='https://wa.me/963930294306'>
+          تطوير صهيب الشعار
+        </a>
+      </span>
     </div>
   );
 };

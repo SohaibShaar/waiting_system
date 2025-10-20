@@ -1,4 +1,5 @@
 import { PrismaClient, DiseasesStatus } from "../generated/prisma";
+import { completeQueue } from "./queue.service";
 
 const prisma = new PrismaClient();
 
@@ -224,10 +225,19 @@ async function saveCompletedPatientData(queueId: number, patientId: number) {
     where: { queueId },
   });
 
-  // حفظ البيانات الكاملة
-  const completedData = await prisma.completedPatientData.create({
-    data: {
+  // حفظ البيانات الكاملة (استخدام upsert للتعامل مع السجلات الموجودة)
+  const completedData = await prisma.completedPatientData.upsert({
+    where: { queueId },
+    create: {
       queueId,
+      patientId,
+      receptionData: receptionData ? JSON.stringify(receptionData) : null,
+      accountingData: accountingData ? JSON.stringify(accountingData) : null,
+      bloodDrawData: bloodDrawData ? JSON.stringify(bloodDrawData) : null,
+      labData: labData ? JSON.stringify(labData) : null,
+      doctorData: doctorData ? JSON.stringify(doctorData) : null,
+    },
+    update: {
       patientId,
       receptionData: receptionData ? JSON.stringify(receptionData) : null,
       accountingData: accountingData ? JSON.stringify(accountingData) : null,
@@ -238,6 +248,10 @@ async function saveCompletedPatientData(queueId: number, patientId: number) {
   });
 
   console.log(`💾 تم حفظ البيانات الكاملة للدور #${queueId}`);
+
+  // إنهاء الدور وتحويله إلى حالة COMPLETED
+  await completeQueue(queueId);
+  console.log(`✅ تم إنهاء الدور #${queueId} ونقله إلى الأرشيف`);
 
   return completedData;
 }

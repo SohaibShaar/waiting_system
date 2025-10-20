@@ -18,6 +18,7 @@ import {
   emitScreenDataUpdate,
   emitStationUpdate,
   emitQueueUpdate,
+  emitQueueCompleted,
 } from "..";
 
 const prisma = new PrismaClient();
@@ -519,11 +520,18 @@ export async function completeService(req: Request, res: Response) {
         nextStation: result.nextStation,
       });
 
-      // تحديث القائمة
+      // تحديث القائمة - إرسال حدث الإكمال
       emitQueueUpdate({
         type: "COMPLETED",
         queueId,
         stationId,
+      });
+
+      // إرسال حدث queue-completed لإزالة الدور من القوائم الجانبية
+      emitQueueCompleted({
+        queueId,
+        stationId,
+        completedAt: new Date().toISOString(),
       });
 
       emitScreenDataUpdate(); // تحديث بيانات الشاشة

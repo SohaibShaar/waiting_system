@@ -19,7 +19,9 @@ function createReceiptCanvas(
   FemaleMotherName,
   FemaleBirthDate,
   FemaleRegistration,
-  date
+  date,
+  maleStatus,
+  femaleStatus
 ) {
   // إعدادات الصفحة
   const scale = 3; // جودة للطباعة
@@ -40,10 +42,6 @@ function createReceiptCanvas(
   // نعمل scale داخل السياق لعرض نظيف مع دقة الطباعة
   ctx.scale(scale, scale);
 
-  // خلفية بيضاء
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, widthPx, heightPx);
-
   // متغيرات تنسيق عامة
   const centerX = widthPx / 2;
   const rightMargin = 40; // المسافة من الحافة اليمنى
@@ -54,7 +52,7 @@ function createReceiptCanvas(
   ctx.fillStyle = "#111111";
   ctx.font = " 14px Arial";
   ctx.textAlign = "left";
-  ctx.fillText(`${date}`, 120, 96); // تاريخ ثابت كما في الصورة
+  ctx.fillText(`${date}`, 120, 100); // تاريخ ثابت كما في الصورة
 
   // ========= محتوى الوثيقة (المحور المركزي) =========
   // عنوان رئيسي كبير بالوسط (في الصورة هناك عبارة ليست بالضخمة - سنجعلها واضحة)
@@ -72,53 +70,97 @@ function createReceiptCanvas(
     200
   );
 
-  // اسم + الاب + الام
-  ctx.font = "bold 16px Arial";
-  ctx.textAlign = "right";
-  ctx.fillText(
-    `لدى معاينة السيد :  ${maleName} ${MaleLastName} بن ${MaleFatherName} والدته ${MaleMotherName}`,
-    470,
-    250
-  );
+  let currentY = 250; // الموقع العمودي الحالي
+  const showMale = maleStatus && maleStatus !== "NOT_EXIST";
+  const showFemale = femaleStatus && femaleStatus !== "NOT_EXIST";
 
-  // مواليد + القيد ورقمه
-  ctx.font = " 16px Arial";
-  ctx.textAlign = "right";
-  ctx.fillText(
-    `مواليد :     ${MaleBirthDate}     القيد ورقمه :     ${MaleRegistration}`,
-    470,
-    300
-  );
+  // إظهار بيانات الرجل إذا كان موجوداً (NORMAL أو LEGAL_INVITATION)
+  if (showMale) {
+    // اسم + الاب + الام
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(
+      `لدى معاينة السيد :  ${maleName || ""} ${MaleLastName || ""} بن ${
+        MaleFatherName || ""
+      } والدته ${MaleMotherName || ""}`,
+      470,
+      currentY
+    );
 
-  // اسم البنت + ابوها + امها
-  ctx.font = "bold 16px Arial";
-  ctx.textAlign = "right";
-  ctx.fillText(
-    `ولدى معاينة الآنسة :  ${FemaleName} ${FemaleLastName} بنت ${FemaleFatherName} والدتها ${FemaleMotherName}`,
-    470,
-    350
-  );
+    // مواليد + القيد ورقمه
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(
+      `مواليد :     ${MaleBirthDate || ""}     القيد ورقمه :     ${
+        MaleRegistration || ""
+      }`,
+      470,
+      currentY + 50
+    );
 
-  // مواليد البنت + القيد ورقمه
-  ctx.font = " 16px Arial";
-  ctx.textAlign = "right";
-  ctx.fillText(
-    `مواليد :     ${FemaleBirthDate}     القيد ورقمه :     ${FemaleRegistration}`,
-    470,
-    400
-  );
+    currentY += 100; // زيادة الموقع العمودي للنص التالي
+  }
 
-  // تبيّن أنهما خاليان من الأمراض السارية و المعدية
-  ctx.font = " 16px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText("تبين أنهما خاليان من الأمراض السارية و المُعدية", centerX, 450);
-  ctx.font = " 16px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText("ولا يُوجد مانع صحي مِن زواجهما حالياً", centerX, 480);
-  ctx.font = " 16px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 510);
+  // إظهار بيانات المرأة إذا كانت موجودة (NORMAL أو LEGAL_INVITATION)
+  if (showFemale) {
+    // اسم البنت + ابوها + امها
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(
+      `لدى معاينة الآنسة :  ${FemaleName || ""} ${FemaleLastName || ""} بنت ${
+        FemaleFatherName || ""
+      } والدتها ${FemaleMotherName || ""}`,
+      470,
+      currentY
+    );
 
+    // مواليد البنت + القيد ورقمه
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(
+      `مواليد :     ${FemaleBirthDate || ""}     القيد ورقمه :     ${
+        FemaleRegistration || ""
+      }`,
+      470,
+      currentY + 50
+    );
+  }
+
+  // النص الختامي (يعتمد على من موجود)
+  if (showMale && showFemale) {
+    // كلاهما موجود
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      "تبين أنهما خاليان من الأمراض السارية و المُعدية",
+      centerX,
+      450
+    );
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("ولا يُوجد مانع صحي مِن زواجهما حالياً", centerX, 500);
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 550);
+  } else if (showMale && !showFemale) {
+    // الرجل فقط
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("تبين أنه خالي من الأمراض السارية و المُعدية", centerX, 450);
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 500);
+  } else if (!showMale && showFemale) {
+    // المرأة فقط
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("تبين أنها خالية من الأمراض السارية و المُعدية", centerX, 450);
+    ctx.font = " 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 500);
+  }
+
+  // توقيع الطبيب (دائماً في الأسفل)
   ctx.font = " 16px Arial";
   ctx.textAlign = "center";
   ctx.fillText("توقيع الطبيب الفاحص", 180, 600);
@@ -142,7 +184,9 @@ export async function printReceipt(
   FemaleMotherName,
   FemaleBirthDate,
   FemaleRegistration,
-  date
+  date,
+  maleStatus,
+  femaleStatus
 ) {
   try {
     console.log("🖨️ بدء طباعة الإيصال...");
@@ -161,7 +205,9 @@ export async function printReceipt(
       FemaleMotherName,
       FemaleBirthDate,
       FemaleRegistration,
-      date
+      date,
+      maleStatus,
+      femaleStatus
     );
 
     // تحويل Canvas إلى صورة
@@ -185,7 +231,6 @@ export async function printReceipt(
       <html dir="rtl" lang="ar">
       <head>
         <meta charset="UTF-8">
-        <title>إيصال دفع</title>
         <style>
           @page {
             size: A5;
@@ -226,7 +271,7 @@ export async function printReceipt(
       </head>
       <body>
         <div class="print-container">
-          <img src="${dataUrl}" alt="إيصال دفع" />
+          <img src="${dataUrl}" />
         </div>
       </body>
       </html>

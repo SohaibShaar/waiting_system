@@ -6,6 +6,7 @@ async function main() {
   // حذف البيانات القديمة أولاً
   console.log("🧹 جاري تنظيف قاعدة البيانات...");
 
+  await prisma.completedPatientData.deleteMany({});
   await prisma.queueHistory.deleteMany({});
   await prisma.completedVisit.deleteMany({});
   await prisma.accountingData.deleteMany({});
@@ -19,6 +20,11 @@ async function main() {
   await prisma.systemSettings.deleteMany({});
   await prisma.favoriteprice.deleteMany({});
   await prisma.fastaddvalue.deleteMany({});
+  await prisma.completedPatientData.deleteMany({});
+
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE completed_patient_data AUTO_INCREMENT = 1`
+  );
   await prisma.$executeRawUnsafe(
     `ALTER TABLE queue_history AUTO_INCREMENT = 1`
   );
@@ -89,7 +95,7 @@ async function main() {
     data: [
       {
         label: "الدعوة الشرعية",
-        value: 200000,
+        value: 250000,
         updatedAt: new Date(),
       },
       {

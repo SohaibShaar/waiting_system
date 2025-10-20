@@ -44,6 +44,35 @@ function createInvoiceCanvas(name, barcodeValue) {
   return canvas;
 }
 
+function createNameCanvas(nameMale, nameFemale) {
+  const scale = 4; // يكفي
+  const widthPx = 500; // مقاس اللصاقة الحقيقي بالبيكسل
+  const heightPx = 300;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = widthPx * scale;
+  canvas.height = heightPx * scale;
+
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, widthPx, heightPx);
+
+  ctx.fillStyle = "#000000";
+  ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+  ctx.textAlign = "center";
+
+  ctx.fillText(nameMale, widthPx / 2, 100);
+  ctx.fillStyle = "#000000";
+  ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+  ctx.textAlign = "center";
+
+  ctx.fillText(nameFemale, widthPx / 2, 200);
+
+  return canvas;
+}
+
 export async function printLabels(
   nameMale,
   barcodeValueMale,
@@ -65,6 +94,7 @@ export async function printLabels(
 
     // 👇 إنشاء ٤ لصاقات (٢ من كل نوع)
     const labels = [
+      createNameCanvas(nameMale, nameFemale),
       createInvoiceCanvas(nameMale, barcodeValueMale),
       createInvoiceCanvas(nameMale, barcodeValueMale2),
       createInvoiceCanvas(nameFemale, barcodeValueFemale),

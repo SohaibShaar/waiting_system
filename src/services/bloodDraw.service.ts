@@ -6,6 +6,8 @@ const prisma = new PrismaClient();
  * توليد أرقام أنابيب الدم الفريدة
  */
 function generateBloodTubeNumbers(
+  queueId: number,
+  queueNumber: number,
   patientId: number,
   maleStatus: SpouseStatus,
   femaleStatus: SpouseStatus
@@ -27,8 +29,8 @@ function generateBloodTubeNumbers(
     maleStatus === SpouseStatus.NORMAL ||
     maleStatus === SpouseStatus.LEGAL_INVITATION
   ) {
-    tubes.maleBloodTube1 = `${patientId}`;
-    tubes.maleBloodTube2 = `${patientId}`;
+    tubes.maleBloodTube1 = `${queueNumber}`;
+    tubes.maleBloodTube2 = `${queueNumber}`;
   }
 
   // توليد أرقام الزوجة (إذا كانت موجودة)
@@ -36,8 +38,8 @@ function generateBloodTubeNumbers(
     femaleStatus === SpouseStatus.NORMAL ||
     femaleStatus === SpouseStatus.LEGAL_INVITATION
   ) {
-    tubes.femaleBloodTube1 = `${patientId}`;
-    tubes.femaleBloodTube2 = `${patientId}`;
+    tubes.femaleBloodTube1 = `${queueNumber}`;
+    tubes.femaleBloodTube2 = `${queueNumber}`;
   }
 
   return tubes;
@@ -127,6 +129,8 @@ async function generateTubeNumbersForQueue(queueId: number) {
 
   // توليد الأرقام
   const tubes = generateBloodTubeNumbers(
+    queueId,
+    queue.queueNumber,
     queue.patientId,
     queue.ReceptionData.maleStatus,
     queue.ReceptionData.femaleStatus

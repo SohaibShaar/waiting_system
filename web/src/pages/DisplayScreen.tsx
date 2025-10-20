@@ -110,7 +110,7 @@ const DisplayScreen = () => {
   ]); // إضافة pendingCallsCount
 
   useEffect(() => {
-    const newSocket = io("http://localhost:3003");
+    const newSocket = io("http://192.168.1.100:3003");
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
@@ -225,13 +225,13 @@ const DisplayScreen = () => {
                 <p
                   className='text-2xl font-bold mx-4 mb-3'
                   style={{ color: "var(--secondary)" }}>
-                  المحطة
+                  التوجه
                 </p>
                 <div
                   className='text-4xl font-bold mx-4'
                   style={{ color: "var(--secondary)" }}>
                   {recentCalls[0]
-                    ? "الشباك " + getStationName(recentCalls[0].displayNumber)
+                    ? "" + getStationName(recentCalls[0].displayNumber)
                     : "بانتظار الاستدعاء"}
                 </div>
               </div>

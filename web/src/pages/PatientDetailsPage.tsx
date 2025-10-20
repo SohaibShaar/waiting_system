@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../components/Header";
 
-const API_URL = "http://localhost:3003/api";
+const API_URL = "http://192.168.1.100:3003/api";
 
 interface PatientData {
   id: number;
