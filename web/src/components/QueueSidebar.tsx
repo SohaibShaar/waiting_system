@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useQueueUpdates } from "../hooks/useQueueUpdates";
 import { API_BASE_URL } from "../services/api";
+
 const API_URL = API_BASE_URL;
 
 interface QueueItem {

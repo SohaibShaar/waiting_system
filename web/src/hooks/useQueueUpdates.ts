@@ -30,6 +30,7 @@ export const useQueueUpdates = (onUpdate?: (update: QueueUpdate) => void) => {
     // Listen for all queue-related events
     newSocket.on("queue-updated", (data: any) => {
       console.log("📋 تحديث الدور:", data);
+
       setUpdateTrigger((prev) => prev + 1);
       if (onUpdate) {
         onUpdate({ type: "QUEUE_UPDATED", data });

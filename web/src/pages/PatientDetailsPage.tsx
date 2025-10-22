@@ -243,7 +243,7 @@ const PatientDetailsPage = () => {
                     ? "border-b-2 border-blue-500 text-blue-500"
                     : "text-gray-600"
                 }`}>
-                🩺 المختبر
+                🩺 غرفة الفحص الطبي
               </button>
               <button
                 onClick={() => setActiveTab("doctor")}

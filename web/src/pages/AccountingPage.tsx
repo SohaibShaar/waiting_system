@@ -17,12 +17,14 @@ interface CurrentPatient {
   femaleName: string;
   priority: number; // إضافة الأولوية
   ReceptionData?: {
+    maleNationalId: string;
     maleName: string;
     maleLastName: string;
     maleFatherName: string;
     maleMotherName: string;
     maleBirthDate: string;
     maleRegistration: string;
+    femaleNationalId: string;
     femaleName: string;
     femaleFatherName: string;
     femaleMotherName: string;
@@ -759,7 +761,12 @@ const AccountingPage = () => {
                       style={{ color: "var(--primary)" }}>
                       {currentPatient.ReceptionData &&
                       currentPatient.ReceptionData.maleName != null ? (
-                        `${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`
+                        <div className='flex flex-col gap-1'>
+                          <span>{`${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleFatherName} ${currentPatient.ReceptionData.maleLastName}`}</span>
+                          <span className='text-[10px] text-gray-500'>
+                            {`والدته : ${currentPatient.ReceptionData.maleMotherName}`}
+                          </span>
+                        </div>
                       ) : currentPatient.ReceptionData?.maleStatus ===
                         "NOT_EXIST" ? (
                         <span className='text-red-500'>لا يوجد زوج</span>
@@ -786,7 +793,10 @@ const AccountingPage = () => {
                       style={{ color: "var(--primary)" }}>
                       {currentPatient.ReceptionData &&
                       currentPatient.ReceptionData.femaleName != null ? (
-                        `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
+                        <div className='flex flex-col gap-1'>
+                          <span>{`${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleFatherName} ${currentPatient.ReceptionData.femaleLastName}`}</span>
+                          <span className='text-[10px] text-gray-500'>{`والدتها : ${currentPatient.ReceptionData.femaleMotherName}`}</span>
+                        </div>
                       ) : currentPatient.ReceptionData?.femaleStatus ===
                         "NOT_EXIST" ? (
                         <span className='text-red-500'>لا يوجد زوجة</span>

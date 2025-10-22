@@ -44,11 +44,14 @@ interface ArchiveRecord {
   createdAt: string;
   queue: {
     queueNumber: number;
+    priority: number;
     ReceptionData: {
       maleName: string | null;
       maleLastName: string | null;
       femaleName: string | null;
       femaleLastName: string | null;
+      maleStatus: string;
+      femaleStatus: string;
     } | null;
   };
 }
@@ -203,18 +206,21 @@ const BloodDrawPage = () => {
       if (response.data.success) {
         alert("✅ تم تسجيل سحب الدم بنجاح!");
         printLabels(
-          "♂ الزوج : " +
+          "♂ الخاطب : " +
             currentPatient.ReceptionData?.maleName +
             " " +
             currentPatient.ReceptionData?.maleLastName || "",
           "M" + tubeNumbers?.maleBloodTube1 || "",
           "M" + tubeNumbers?.maleBloodTube2 || "",
-          "♀ الزوجة : " +
+          "♀ الخطيبة : " +
             currentPatient.ReceptionData?.femaleName +
             " " +
             currentPatient.ReceptionData?.femaleLastName || "",
           "F" + tubeNumbers?.femaleBloodTube1 || "",
-          "F" + tubeNumbers?.femaleBloodTube2 || ""
+          "F" + tubeNumbers?.femaleBloodTube2 || "",
+          currentPatient.priority,
+          currentPatient.ReceptionData?.maleStatus || "",
+          currentPatient.ReceptionData?.femaleStatus || ""
         );
         await axios.post(`${API_URL}/stations/${stationId}/complete-service`, {
           queueId: currentPatient.queueId,
@@ -903,21 +909,24 @@ const BloodDrawPage = () => {
                                 "../utils/labelPrinter"
                               );
                               printLabels(
-                                "♂ الزوج : " +
+                                "♂ الخاطب : " +
                                   (record.queue.ReceptionData?.maleName || "") +
                                   " " +
                                   (record.queue.ReceptionData?.maleLastName ||
                                     ""),
                                 "M" + (record.maleBloodTube1 || ""),
                                 "M" + (record.maleBloodTube2 || ""),
-                                "♀ الزوجة : " +
+                                "♀ الخطيبة : " +
                                   (record.queue.ReceptionData?.femaleName ||
                                     "") +
                                   " " +
                                   (record.queue.ReceptionData?.femaleLastName ||
                                     ""),
                                 "F" + (record.femaleBloodTube1 || ""),
-                                "F" + (record.femaleBloodTube2 || "")
+                                "F" + (record.femaleBloodTube2 || ""),
+                                record.queue.priority,
+                                record.queue.ReceptionData?.maleStatus || "",
+                                record.queue.ReceptionData?.femaleStatus || ""
                               );
                             }
                           }}

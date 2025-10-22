@@ -44,7 +44,15 @@ function createInvoiceCanvas(name, barcodeValue) {
   return canvas;
 }
 
-function createNameCanvas(nameMale, nameFemale) {
+function createNameCanvas(
+  nameMale,
+  nameFemale,
+  priority,
+  barcodeValueMale,
+  barcodeValueFemale,
+  maleStatus,
+  femaleStatus
+) {
   const scale = 4; // يكفي
   const widthPx = 500; // مقاس اللصاقة الحقيقي بالبيكسل
   const heightPx = 300;
@@ -59,16 +67,130 @@ function createNameCanvas(nameMale, nameFemale) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, widthPx, heightPx);
 
-  ctx.fillStyle = "#000000";
-  ctx.font = `36px Arial`; // كبر الخط حسب التكبير
-  ctx.textAlign = "center";
+  if (priority === 1) {
+    if (maleStatus === "LEGAL_INVITATION" || femaleStatus === "NOT_EXIST") {
+      ctx.fillStyle = "#000000";
+      ctx.font = `48px bold Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText("*** مُستعجل ***", widthPx / 2, 100);
 
-  ctx.fillText(nameMale, widthPx / 2, 100);
-  ctx.fillStyle = "#000000";
-  ctx.font = `36px Arial`; // كبر الخط حسب التكبير
-  ctx.textAlign = "center";
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText("( دعوة شرعية )", widthPx / 2, 150);
 
-  ctx.fillText(nameFemale, widthPx / 2, 200);
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(nameMale, widthPx / 2, 200);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueMale, widthPx / 2, 250);
+    } else if (
+      femaleStatus === "LEGAL_INVITATION" ||
+      maleStatus === "NOT_EXIST"
+    ) {
+      ctx.fillStyle = "#000000";
+      ctx.font = `48px bold Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText("*** مُستعجل ***", widthPx / 2, 100);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText("( دعوة شرعية )", widthPx / 2, 150);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(nameFemale, widthPx / 2, 200);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueFemale, widthPx / 2, 250);
+    } else {
+      ctx.fillStyle = "#000000";
+      ctx.font = `48px bold Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText("*** مُستعجل ***", widthPx / 2, 100);
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+
+      ctx.fillText(nameMale, widthPx / 2, 150);
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(nameFemale, widthPx / 2, 200);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueFemale, 300, 250);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueMale, 200, 250);
+    }
+  } else {
+    if (maleStatus === "LEGAL_INVITATION" || femaleStatus === "NOT_EXIST") {
+      ctx.fillStyle = "#000000";
+      ctx.font = `48px bold Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText("( دعوة شرعية )", widthPx / 2, 100);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(nameMale, widthPx / 2, 180);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueMale, widthPx / 2, 260);
+    } else if (
+      femaleStatus === "LEGAL_INVITATION" ||
+      maleStatus === "NOT_EXIST"
+    ) {
+      ctx.fillStyle = "#000000";
+      ctx.font = `48px bold Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText("( دعوة شرعية )", widthPx / 2, 100);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(nameFemale, widthPx / 2, 180);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueFemale, widthPx / 2, 260);
+    } else {
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(nameMale, widthPx / 2, 75);
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(nameFemale, widthPx / 2, 150);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueFemale, 300, 225);
+
+      ctx.fillStyle = "#000000";
+      ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+      ctx.textAlign = "center";
+      ctx.fillText(barcodeValueMale, 200, 225);
+    }
+  }
 
   return canvas;
 }
@@ -79,7 +201,10 @@ export async function printLabels(
   barcodeValueMale2,
   nameFemale,
   barcodeValueFemale,
-  barcodeValueFemale2
+  barcodeValueFemale2,
+  priority,
+  maleStatus,
+  femaleStatus
 ) {
   try {
     if (!qz.websocket.isActive()) {
@@ -92,25 +217,87 @@ export async function printLabels(
     const printerName = printers[0];
     const config = qz.configs.create(printerName, { encoding: "CP864" });
 
-    // 👇 إنشاء ٤ لصاقات (٢ من كل نوع)
-    const labels = [
-      createNameCanvas(nameMale, nameFemale),
-      createInvoiceCanvas(nameMale, barcodeValueMale),
-      createInvoiceCanvas(nameMale, barcodeValueMale2),
-      createInvoiceCanvas(nameFemale, barcodeValueFemale),
-      createInvoiceCanvas(nameFemale, barcodeValueFemale2),
-    ];
+    // 👇 إنشاء 5 لصاقات (2 من كل نوع واسمية)
+    if (maleStatus === "LEGAL_INVITATION" || femaleStatus === "NOT_EXIST") {
+      const labels = [
+        createNameCanvas(
+          nameMale,
+          nameFemale,
+          priority,
+          barcodeValueMale,
+          barcodeValueFemale,
+          maleStatus,
+          femaleStatus
+        ),
+        createInvoiceCanvas(nameMale, barcodeValueMale),
+        createInvoiceCanvas(nameMale, barcodeValueMale2),
+      ];
 
-    // 👇 أمر طباعة واحد يحتوي جميع الصور
-    const data = labels.map((canvas) => ({
-      type: "pixel",
-      format: "image",
-      flavor: "file",
-      data: canvas.toDataURL("image/png"),
-    }));
+      // 👇 أمر طباعة واحد يحتوي جميع الصور
+      const data = labels.map((canvas) => ({
+        type: "pixel",
+        format: "image",
+        flavor: "file",
+        data: canvas.toDataURL("image/png"),
+      }));
 
-    await qz.print(config, data);
-    console.log("✅ تمت طباعة ٤ لصاقات (٢ + ٢) بنجاح");
+      await qz.print(config, data);
+      console.log("✅ تمت طباعة 3 لصاقات (2 + 1) بنجاح");
+    } else if (
+      femaleStatus === "LEGAL_INVITATION" ||
+      maleStatus === "NOT_EXIST"
+    ) {
+      const labels = [
+        createNameCanvas(
+          nameMale,
+          nameFemale,
+          priority,
+          barcodeValueMale,
+          barcodeValueFemale,
+          maleStatus,
+          femaleStatus
+        ),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale2),
+      ];
+
+      // 👇 أمر طباعة واحد يحتوي جميع الصور
+      const data = labels.map((canvas) => ({
+        type: "pixel",
+        format: "image",
+        flavor: "file",
+        data: canvas.toDataURL("image/png"),
+      }));
+
+      await qz.print(config, data);
+      console.log("✅ تمت طباعة 3 لصاقات (2 + 1) بنجاح");
+    } else {
+      const labels = [
+        createNameCanvas(
+          nameMale,
+          nameFemale,
+          priority,
+          barcodeValueMale,
+          barcodeValueFemale,
+          maleStatus,
+          femaleStatus
+        ),
+        createInvoiceCanvas(nameMale, barcodeValueMale),
+        createInvoiceCanvas(nameMale, barcodeValueMale2),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale2),
+      ];
+      // 👇 أمر طباعة واحد يحتوي جميع الصور
+      const data = labels.map((canvas) => ({
+        type: "pixel",
+        format: "image",
+        flavor: "file",
+        data: canvas.toDataURL("image/png"),
+      }));
+
+      await qz.print(config, data);
+      console.log("✅ تمت طباعة 5 لصاقات (4 + 1) بنجاح");
+    }
   } catch (err) {
     console.error("❌ حدث خطأ:", err);
   }

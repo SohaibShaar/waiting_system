@@ -98,6 +98,12 @@ function createReceiptCanvas(
       currentY + 50
     );
 
+    if (!showFemale) {
+      ctx.font = "bold 16px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("( دعوة شرعية )", centerX, currentY + 130);
+    }
+
     currentY += 100; // زيادة الموقع العمودي للنص التالي
   }
 
@@ -124,6 +130,12 @@ function createReceiptCanvas(
       470,
       currentY + 50
     );
+
+    if (!showMale) {
+      ctx.font = "bold 16px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("( دعوة شرعية )", centerX, currentY + 130);
+    }
   }
 
   // النص الختامي (يعتمد على من موجود)

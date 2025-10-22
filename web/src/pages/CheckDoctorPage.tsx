@@ -14,6 +14,8 @@ interface CurrentPatient {
   femaleName: string;
   priority: number;
   ReceptionData?: {
+    maleAge: number;
+    femaleAge: number;
     maleName: string;
     maleLastName: string;
     femaleName: string;
@@ -621,7 +623,10 @@ const LabPage = () => {
                       <div className='text-lg font-bold'>
                         {currentPatient.ReceptionData &&
                         currentPatient.ReceptionData.maleName != null ? (
-                          `${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`
+                          <div className='flex flex-col gap-1'>
+                            <span>{`${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`}</span>
+                            <span className='text-[14px] text-gray-500'>{`العمر : ${currentPatient.ReceptionData.maleAge} سنة`}</span>
+                          </div>
                         ) : currentPatient.ReceptionData?.maleStatus ===
                           "NOT_EXIST" ? (
                           <span className='text-red-500'>لا يوجد زوج</span>
@@ -647,7 +652,10 @@ const LabPage = () => {
                     <div className='text-lg font-bold'>
                       {currentPatient.ReceptionData &&
                       currentPatient.ReceptionData.femaleName != null ? (
-                        `${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`
+                        <div className='flex flex-col gap-1'>
+                          <span>{`${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`}</span>
+                          <span className='text-[14px] text-gray-500'>{`العمر : ${currentPatient.ReceptionData.femaleAge} سنة`}</span>
+                        </div>
                       ) : currentPatient.ReceptionData?.femaleStatus ===
                         "NOT_EXIST" ? (
                         <span className='text-red-500'>لا يوجد زوجة</span>
