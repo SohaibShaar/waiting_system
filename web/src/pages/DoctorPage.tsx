@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
+import printReceipt from "../utils/doctorFormPrinter";
+import { API_BASE_URL } from "../services/api";
 
-const API_URL = "http://192.168.1.100:3003/api";
+const API_URL = API_BASE_URL;
 const STATION_DISPLAY_NUMBER = 5;
 
 interface CurrentPatient {
@@ -18,6 +20,7 @@ interface CurrentPatient {
     femaleStatus: string;
     maleName: string;
     maleLastName: string;
+    maleFatherName: string;
     femaleName: string;
     femaleLastName: string;
     phoneNumber?: string;
@@ -77,8 +80,10 @@ const DoctorPage = () => {
       ReceptionData?: {
         maleName: string;
         maleLastName: string;
+        maleFatherName: string;
         femaleName: string;
         femaleLastName: string;
+        femaleFatherName: string;
         phoneNumber?: string;
       };
       LabData?: {
@@ -293,6 +298,14 @@ const DoctorPage = () => {
     }
   }, [searchTerm, showCompletedList]);
 
+  const handlePrint = (
+    maleName: string,
+    maleLastName: string,
+    maleFatherName: string
+  ) => {
+    printReceipt(maleName, maleLastName, maleFatherName);
+  };
+
   return (
     <div
       className='h-screen flex flex-col'
@@ -451,9 +464,13 @@ const DoctorPage = () => {
                                   👁️ عرض
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    alert("سيتم تخصيص وظيفة الطباعة لاحقاً");
-                                  }}
+                                  onClick={() =>
+                                    handlePrint(
+                                      item.ReceptionData?.maleName || "",
+                                      item.ReceptionData?.maleLastName || "",
+                                      item.ReceptionData?.maleFatherName || ""
+                                    )
+                                  }
                                   className='bg-gray-500 text-white hover:opacity-80 cursor-pointer rounded-lg px-4 py-2 text-sm'>
                                   🖨️ طباعة
                                 </button>
@@ -648,7 +665,7 @@ const DoctorPage = () => {
                     </div>
                     <div className='space-y-1'>
                       <div className='flex items-center gap-2'>
-                        <span className='text-lg font-bold w-16'>HBS:</span>
+                        <span className='text-lg font-bold w-16'>HBV:</span>
                         <select
                           value={formData.maleHBSstatus}
                           onChange={(e) =>
@@ -679,7 +696,7 @@ const DoctorPage = () => {
                     </div>
                     <div className='space-y-1'>
                       <div className='flex items-center gap-2'>
-                        <span className='text-lg font-bold w-16'>HBC:</span>
+                        <span className='text-lg font-bold w-16'>HCV:</span>
                         <select
                           value={formData.maleHBCstatus}
                           onChange={(e) =>
@@ -802,7 +819,7 @@ const DoctorPage = () => {
                     </div>
                     <div className='space-y-1'>
                       <div className='flex items-center gap-2'>
-                        <span className='text-lg font-bold w-16'>HBS:</span>
+                        <span className='text-lg font-bold w-16'>HBV:</span>
                         <select
                           value={formData.femaleHBSstatus}
                           onChange={(e) =>
@@ -833,7 +850,7 @@ const DoctorPage = () => {
                     </div>
                     <div className='space-y-1'>
                       <div className='flex items-center gap-2'>
-                        <span className='text-lg font-bold w-16'>HBC:</span>
+                        <span className='text-lg font-bold w-16'>HCV:</span>
                         <select
                           value={formData.femaleHBCstatus}
                           onChange={(e) =>

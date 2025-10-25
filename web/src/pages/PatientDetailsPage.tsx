@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Header from "../components/Header";
+import { API_BASE_URL } from "../services/api";
 
-const API_URL = "http://192.168.1.100:3003/api";
+const API_URL = API_BASE_URL;
 
 interface PatientData {
   id: number;
@@ -842,7 +844,7 @@ const DoctorTab = ({
             {/* HBS Test */}
             <div className='p-3 rounded bg-gray-50'>
               <div className='flex justify-between items-center mb-2'>
-                <span className='font-semibold'>HBS:</span>
+                <span className='font-semibold'>HBV:</span>
                 <select
                   value={data.maleHBSstatus || "NEGATIVE"}
                   onChange={(e) => updateField("maleHBSstatus", e.target.value)}
@@ -865,7 +867,7 @@ const DoctorTab = ({
             {/* HBC Test */}
             <div className='p-3 rounded bg-gray-50'>
               <div className='flex justify-between items-center mb-2'>
-                <span className='font-semibold'>HBC:</span>
+                <span className='font-semibold'>HCV:</span>
                 <select
                   value={data.maleHBCstatus || "NEGATIVE"}
                   onChange={(e) => updateField("maleHBCstatus", e.target.value)}
@@ -1032,7 +1034,7 @@ const DoctorTab = ({
             {/* HBS Test */}
             <div className='p-3 rounded bg-gray-50'>
               <div className='flex justify-between items-center mb-2'>
-                <span className='font-semibold'>HBS:</span>
+                <span className='font-semibold'>HBV:</span>
                 <select
                   value={data.femaleHBSstatus || "NEGATIVE"}
                   onChange={(e) =>
@@ -1059,7 +1061,7 @@ const DoctorTab = ({
             {/* HBC Test */}
             <div className='p-3 rounded bg-gray-50'>
               <div className='flex justify-between items-center mb-2'>
-                <span className='font-semibold'>HBC:</span>
+                <span className='font-semibold'>HCV:</span>
                 <select
                   value={data.femaleHBCstatus || "NEGATIVE"}
                   onChange={(e) =>

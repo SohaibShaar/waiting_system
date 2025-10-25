@@ -3,8 +3,9 @@ import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
 import { printLabels } from "../utils/labelPrinter";
+import { API_BASE_URL } from "../services/api";
 
-const API_URL = "http://192.168.1.100:3003/api";
+const API_URL = API_BASE_URL;
 const STATION_DISPLAY_NUMBER = 4;
 
 interface CurrentPatient {

@@ -139,38 +139,38 @@ function createReceiptCanvas(
   }
 
   // النص الختامي (يعتمد على من موجود)
-  if (showMale && showFemale) {
-    // كلاهما موجود
-    ctx.font = " 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(
-      "تبين أنهما خاليان من الأمراض السارية و المُعدية",
-      centerX,
-      450
-    );
-    ctx.font = " 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("ولا يُوجد مانع صحي مِن زواجهما حالياً", centerX, 500);
-    ctx.font = " 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 550);
-  } else if (showMale && !showFemale) {
-    // الرجل فقط
-    ctx.font = " 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("تبين أنه خالي من الأمراض السارية و المُعدية", centerX, 450);
-    ctx.font = " 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 500);
-  } else if (!showMale && showFemale) {
-    // المرأة فقط
-    ctx.font = " 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("تبين أنها خالية من الأمراض السارية و المُعدية", centerX, 450);
-    ctx.font = " 16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 500);
-  }
+  // if (showMale && showFemale) {
+  //   // كلاهما موجود
+  //   ctx.font = " 16px Arial";
+  //   ctx.textAlign = "center";
+  //   ctx.fillText(
+  //     "تبين أنهما خاليان من الأمراض السارية و المُعدية",
+  //     centerX,
+  //     450
+  //   );
+  //   ctx.font = " 16px Arial";
+  //   ctx.textAlign = "center";
+  //   ctx.fillText("ولا يُوجد مانع صحي مِن زواجهما حالياً", centerX, 500);
+  //   ctx.font = " 16px Arial";
+  //   ctx.textAlign = "center";
+  //   ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 550);
+  // } else if (showMale && !showFemale) {
+  //   // الرجل فقط
+  //   ctx.font = " 16px Arial";
+  //   ctx.textAlign = "center";
+  //   ctx.fillText("تبين أنه خالي من الأمراض السارية و المُعدية", centerX, 450);
+  //   ctx.font = " 16px Arial";
+  //   ctx.textAlign = "center";
+  //   ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 500);
+  // } else if (!showMale && showFemale) {
+  //   // المرأة فقط
+  //   ctx.font = " 16px Arial";
+  //   ctx.textAlign = "center";
+  //   ctx.fillText("تبين أنها خالية من الأمراض السارية و المُعدية", centerX, 450);
+  //   ctx.font = " 16px Arial";
+  //   ctx.textAlign = "center";
+  //   ctx.fillText("يُرجى الإطّلاع وشكراً", centerX, 500);
+  // }
 
   // توقيع الطبيب (دائماً في الأسفل)
   ctx.font = " 16px Arial";

@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../services/api";
 
-const API_URL = "http://192.168.1.100:3003/api";
+const API_URL = API_BASE_URL;
 
 interface PasswordProtectedRouteProps {
   pageName: string;
