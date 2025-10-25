@@ -56,6 +56,7 @@ interface ArchiveRecord {
   createdAt: string;
   queue: {
     queueNumber: number;
+    priority: number;
     ReceptionData: {
       maleName: string | null;
       maleLastName: string | null;
@@ -1107,6 +1108,9 @@ const AccountingPage = () => {
                       ID
                     </th>
                     <th className='border border-gray-300 px-4 py-3 text-center'>
+                      الأولوية
+                    </th>
+                    <th className='border border-gray-300 px-4 py-3 text-center'>
                       الخطيب
                     </th>
                     <th className='border border-gray-300 px-4 py-3 text-center'>
@@ -1131,6 +1135,17 @@ const AccountingPage = () => {
                       </td>
                       <td className='border border-gray-300 px-4 py-3 text-center'>
                         {record.patientId}
+                      </td>
+                      <td className='border border-gray-300 px-4 py-3 text-center'>
+                        {record.queue?.priority === 1 ? (
+                          <span className='px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800'>
+                            مُستعجل
+                          </span>
+                        ) : (
+                          <span className='px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-600'>
+                            عادي
+                          </span>
+                        )}
                       </td>
                       <td className='border border-gray-300 px-4 py-3 text-center'>
                         {record.queue.ReceptionData?.maleName || "-"}{" "}

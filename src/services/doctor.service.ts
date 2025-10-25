@@ -299,17 +299,38 @@ async function getAllCompletedPatientData(filters?: {
     },
   });
 
+  // Get queue data for all completed patients to include priority
+  const queueIds = allData.map((item) => item.queueId);
+  const queues = await prisma.queue.findMany({
+    where: {
+      id: { in: queueIds },
+    },
+    select: {
+      id: true,
+      priority: true,
+      queueNumber: true,
+    },
+  });
+
+  // Create a map for quick lookup
+  const queueMap = new Map(queues.map((q) => [q.id, q]));
+
   // Parse JSON and apply search filter
-  let parsedData = allData.map((item) => ({
-    ...item,
-    ReceptionData: item.receptionData ? JSON.parse(item.receptionData) : null,
-    AccountingData: item.accountingData
-      ? JSON.parse(item.accountingData)
-      : null,
-    BloodDrawData: item.bloodDrawData ? JSON.parse(item.bloodDrawData) : null,
-    LabData: item.labData ? JSON.parse(item.labData) : null,
-    DoctorData: item.doctorData ? JSON.parse(item.doctorData) : null,
-  }));
+  let parsedData = allData.map((item) => {
+    const queueData = queueMap.get(item.queueId);
+    return {
+      ...item,
+      priority: queueData?.priority || 0,
+      queueNumber: queueData?.queueNumber,
+      ReceptionData: item.receptionData ? JSON.parse(item.receptionData) : null,
+      AccountingData: item.accountingData
+        ? JSON.parse(item.accountingData)
+        : null,
+      BloodDrawData: item.bloodDrawData ? JSON.parse(item.bloodDrawData) : null,
+      LabData: item.labData ? JSON.parse(item.labData) : null,
+      DoctorData: item.doctorData ? JSON.parse(item.doctorData) : null,
+    };
+  });
 
   // Apply search filter on parsed data
   if (filters?.search) {

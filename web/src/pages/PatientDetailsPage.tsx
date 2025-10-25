@@ -134,6 +134,26 @@ const PatientDetailsPage = () => {
       return;
     }
 
+    // التحقق من فصيلة الدم إذا كان في تبويب الطبيب
+    if (activeTab === "doctor") {
+      if (
+        !editedDoctor.maleBloodType &&
+        data?.ReceptionData?.maleStatus !== "LEGAL_INVITATION" &&
+        data?.ReceptionData?.maleStatus !== "NOT_EXIST"
+      ) {
+        alert("⚠️ يرجى إدخال فصيلة دم الزوج");
+        return;
+      }
+      if (
+        !editedDoctor.femaleBloodType &&
+        data?.ReceptionData?.femaleStatus !== "LEGAL_INVITATION" &&
+        data?.ReceptionData?.femaleStatus !== "NOT_EXIST"
+      ) {
+        alert("⚠️ يرجى إدخال فصيلة دم الزوجة");
+        return;
+      }
+    }
+
     try {
       setSaving(true);
 
@@ -775,36 +795,56 @@ const DoctorTab = ({
         <div
           className='p-4 rounded-lg'
           style={{ backgroundColor: "var(--light)" }}>
-          <h4 className='font-semibold mb-2'>👨 فصيلة دم الخطيب</h4>
+          <h4 className='font-semibold mb-2'>👨 فصيلة دم الخطيب *</h4>
           <select
             value={data.maleBloodType || ""}
             onChange={(e) => updateField("maleBloodType", e.target.value)}
+            required
             className='input-field w-full text-lg font-bold'
-            style={{ color: "var(--primary)" }}>
-            <option value=''>اختر الفصيلة</option>
+            style={{
+              color: "var(--primary)",
+              borderColor: !data.maleBloodType ? "#ef4444" : undefined,
+              borderWidth: !data.maleBloodType ? "2px" : undefined,
+            }}>
+            <option value=''>اختر الفصيلة *</option>
             {bloodTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
               </option>
             ))}
           </select>
+          {!data.maleBloodType && (
+            <span className='text-xs text-red-500 mt-1 block'>
+              هذا الحقل إجباري
+            </span>
+          )}
         </div>
         <div
           className='p-4 rounded-lg'
           style={{ backgroundColor: "var(--light)" }}>
-          <h4 className='font-semibold mb-2'>👩 فصيلة دم الخطيبة</h4>
+          <h4 className='font-semibold mb-2'>👩 فصيلة دم الخطيبة *</h4>
           <select
             value={data.femaleBloodType || ""}
             onChange={(e) => updateField("femaleBloodType", e.target.value)}
+            required
             className='input-field w-full text-lg font-bold'
-            style={{ color: "var(--primary)" }}>
-            <option value=''>اختر الفصيلة</option>
+            style={{
+              color: "var(--primary)",
+              borderColor: !data.femaleBloodType ? "#ef4444" : undefined,
+              borderWidth: !data.femaleBloodType ? "2px" : undefined,
+            }}>
+            <option value=''>اختر الفصيلة *</option>
             {bloodTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
               </option>
             ))}
           </select>
+          {!data.femaleBloodType && (
+            <span className='text-xs text-red-500 mt-1 block'>
+              هذا الحقل إجباري
+            </span>
+          )}
         </div>
       </div>
 

@@ -687,138 +687,149 @@ const LabPage = () => {
                   placeholder='اسم الطبيب/الفني'
                 />
 
-                {/* Male Status */}
-                <div
-                  className='p-4 rounded-lg '
-                  style={{ backgroundColor: "var(--light)" }}>
-                  <h3
-                    className='text-sm font-semibold mb-3'
-                    style={{ color: "var(--primary)" }}>
-                    👨 حالة الزوج
-                  </h3>
-                  <div className='flex flex-row items-center justify-center gap-3 mb-3'>
-                    <div className='flex flex-row items-center justify-center gap-3 w-[50%]'>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          setFormData({ ...formData, isMaleHealthy: "HEALTHY" })
-                        }
-                        className='btn-success w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
-                        style={{
-                          backgroundColor:
-                            formData.isMaleHealthy === "HEALTHY"
-                              ? "var(--primary)"
-                              : "var(--white)",
-                          color:
-                            formData.isMaleHealthy === "HEALTHY"
-                              ? "var(--white)"
-                              : "var(--dark)",
-                        }}>
-                        سليم
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            isMaleHealthy: "UNHEALTHY",
-                          })
-                        }
-                        className='btn-danger w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
-                        style={{
-                          backgroundColor:
-                            formData.isMaleHealthy === "UNHEALTHY"
-                              ? "#dc2626"
-                              : "var(--white)",
-                          color:
-                            formData.isMaleHealthy === "UNHEALTHY"
-                              ? "var(--white)"
-                              : "var(--dark)",
-                        }}>
-                        غير سليم
-                      </button>
+                {currentPatient.ReceptionData?.femaleStatus !==
+                  "LEGAL_INVITATION" &&
+                  currentPatient.ReceptionData?.maleStatus !== "NOT_EXIST" && (
+                    <div
+                      className='p-4 rounded-lg '
+                      style={{ backgroundColor: "var(--light)" }}>
+                      <h3
+                        className='text-sm font-semibold mb-3'
+                        style={{ color: "var(--primary)" }}>
+                        👨 حالة الزوج
+                      </h3>
+                      <div className='flex flex-row items-center justify-center gap-3 mb-3'>
+                        <div className='flex flex-row items-center justify-center gap-3 w-[50%]'>
+                          <button
+                            type='button'
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                isMaleHealthy: "HEALTHY",
+                              })
+                            }
+                            className='btn-success w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
+                            style={{
+                              backgroundColor:
+                                formData.isMaleHealthy === "HEALTHY"
+                                  ? "var(--primary)"
+                                  : "var(--white)",
+                              color:
+                                formData.isMaleHealthy === "HEALTHY"
+                                  ? "var(--white)"
+                                  : "var(--dark)",
+                            }}>
+                            سليم
+                          </button>
+                          <button
+                            type='button'
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                isMaleHealthy: "UNHEALTHY",
+                              })
+                            }
+                            className='btn-danger w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
+                            style={{
+                              backgroundColor:
+                                formData.isMaleHealthy === "UNHEALTHY"
+                                  ? "#dc2626"
+                                  : "var(--white)",
+                              color:
+                                formData.isMaleHealthy === "UNHEALTHY"
+                                  ? "var(--white)"
+                                  : "var(--dark)",
+                            }}>
+                            غير سليم
+                          </button>
+                        </div>
+                        <textarea
+                          value={formData.maleNotes}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              maleNotes: e.target.value,
+                            })
+                          }
+                          className='input-field w-full'
+                          rows={2}
+                          placeholder='ملاحظات على الزوج'
+                        />
+                      </div>
                     </div>
-                    <textarea
-                      value={formData.maleNotes}
-                      onChange={(e) =>
-                        setFormData({ ...formData, maleNotes: e.target.value })
-                      }
-                      className='input-field w-full'
-                      rows={2}
-                      placeholder='ملاحظات على الزوج'
-                    />
-                  </div>
-                </div>
-
-                {/* Female Status */}
-                <div
-                  className='p-4 rounded-lg'
-                  style={{ backgroundColor: "var(--light)" }}>
-                  <h3
-                    className='text-sm font-semibold mb-3'
-                    style={{ color: "var(--primary)" }}>
-                    👩 حالة الزوجة
-                  </h3>
-                  <div className='flex flex-row items-center justify-center gap-3 mb-3'>
-                    <div className='flex flex-row items-center justify-center gap-3 w-[50%]'>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            isFemaleHealthy: "HEALTHY",
-                          })
-                        }
-                        className='btn-success w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
-                        style={{
-                          backgroundColor:
-                            formData.isFemaleHealthy === "HEALTHY"
-                              ? "var(--primary)"
-                              : "var(--white)",
-                          color:
-                            formData.isFemaleHealthy === "HEALTHY"
-                              ? "var(--white)"
-                              : "var(--dark)",
-                        }}>
-                        سليمة
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            isFemaleHealthy: "UNHEALTHY",
-                          })
-                        }
-                        className='btn-danger w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
-                        style={{
-                          backgroundColor:
-                            formData.isFemaleHealthy === "UNHEALTHY"
-                              ? "#dc2626"
-                              : "var(--white)",
-                          color:
-                            formData.isFemaleHealthy === "UNHEALTHY"
-                              ? "var(--white)"
-                              : "var(--dark)",
-                        }}>
-                        غير سليمة
-                      </button>
+                  )}
+                {currentPatient.ReceptionData?.maleStatus !==
+                  "LEGAL_INVITATION" &&
+                  currentPatient.ReceptionData?.femaleStatus !==
+                    "NOT_EXIST" && (
+                    <div
+                      className='p-4 rounded-lg'
+                      style={{ backgroundColor: "var(--light)" }}>
+                      <h3
+                        className='text-sm font-semibold mb-3'
+                        style={{ color: "var(--primary)" }}>
+                        👩 حالة الزوجة
+                      </h3>
+                      <div className='flex flex-row items-center justify-center gap-3 mb-3'>
+                        <div className='flex flex-row items-center justify-center gap-3 w-[50%]'>
+                          <button
+                            type='button'
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                isFemaleHealthy: "HEALTHY",
+                              })
+                            }
+                            className='btn-success w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
+                            style={{
+                              backgroundColor:
+                                formData.isFemaleHealthy === "HEALTHY"
+                                  ? "var(--primary)"
+                                  : "var(--white)",
+                              color:
+                                formData.isFemaleHealthy === "HEALTHY"
+                                  ? "var(--white)"
+                                  : "var(--dark)",
+                            }}>
+                            سليمة
+                          </button>
+                          <button
+                            type='button'
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                isFemaleHealthy: "UNHEALTHY",
+                              })
+                            }
+                            className='btn-danger w-full py-3 rounded-lg font-bold transition shadow-md hover:shadow-lg'
+                            style={{
+                              backgroundColor:
+                                formData.isFemaleHealthy === "UNHEALTHY"
+                                  ? "#dc2626"
+                                  : "var(--white)",
+                              color:
+                                formData.isFemaleHealthy === "UNHEALTHY"
+                                  ? "var(--white)"
+                                  : "var(--dark)",
+                            }}>
+                            غير سليمة
+                          </button>
+                        </div>
+                        <textarea
+                          value={formData.femaleNotes}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              femaleNotes: e.target.value,
+                            })
+                          }
+                          className='input-field w-full'
+                          rows={2}
+                          placeholder='ملاحظات على الزوجة'
+                        />
+                      </div>
                     </div>
-                    <textarea
-                      value={formData.femaleNotes}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          femaleNotes: e.target.value,
-                        })
-                      }
-                      className='input-field w-full'
-                      rows={2}
-                      placeholder='ملاحظات على الزوجة'
-                    />
-                  </div>
-                </div>
-
+                  )}
                 {/* General Notes */}
                 <textarea
                   value={formData.notes}
