@@ -139,7 +139,8 @@ const PatientDetailsPage = () => {
       if (
         !editedDoctor.maleBloodType &&
         data?.ReceptionData?.maleStatus !== "LEGAL_INVITATION" &&
-        data?.ReceptionData?.maleStatus !== "NOT_EXIST"
+        data?.ReceptionData?.maleStatus !== "NOT_EXIST" &&
+        data?.ReceptionData?.maleStatus !== "OUT_OF_COUNTRY"
       ) {
         alert("⚠️ يرجى إدخال فصيلة دم الزوج");
         return;
@@ -799,7 +800,6 @@ const DoctorTab = ({
           <select
             value={data.maleBloodType || ""}
             onChange={(e) => updateField("maleBloodType", e.target.value)}
-            required
             className='input-field w-full text-lg font-bold'
             style={{
               color: "var(--primary)",

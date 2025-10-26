@@ -179,14 +179,24 @@ const DoctorPage = () => {
     if (!currentPatient?.ReceptionData) return true;
 
     // إخفاء قسم الزوج إذا كانت الزوجة دعوة شرعية
-    return currentPatient.ReceptionData.femaleStatus !== "LEGAL_INVITATION";
+    return (
+      currentPatient.ReceptionData.femaleStatus !== "LEGAL_INVITATION" &&
+      currentPatient.ReceptionData.maleStatus !== "OUT_OF_COUNTRY" &&
+      currentPatient.ReceptionData.maleStatus !== "OUT_OF_PROVINCE" &&
+      currentPatient.ReceptionData.maleStatus !== "NOT_EXIST"
+    );
   };
 
   const shouldShowFemaleSection = () => {
     if (!currentPatient?.ReceptionData) return true;
 
     // إخفاء قسم الزوجة إذا كان الزوج دعوة شرعية
-    return currentPatient.ReceptionData.maleStatus !== "LEGAL_INVITATION";
+    return (
+      currentPatient.ReceptionData.maleStatus !== "LEGAL_INVITATION" &&
+      currentPatient.ReceptionData.femaleStatus !== "OUT_OF_COUNTRY" &&
+      currentPatient.ReceptionData.femaleStatus !== "OUT_OF_PROVINCE" &&
+      currentPatient.ReceptionData.femaleStatus !== "NOT_EXIST"
+    );
   };
 
   const shouldShowBothSections = () => {
@@ -897,6 +907,8 @@ const DoctorPage = () => {
                                         item.ReceptionData?.maleStatus || "",
                                       femaleStatus:
                                         item.ReceptionData?.femaleStatus || "",
+                                      idnumber: item.queueId || "",
+                                      priority: item.priority || "",
                                     };
 
                                     printReceipt(printParams);

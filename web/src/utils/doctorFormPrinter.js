@@ -48,7 +48,9 @@ function createReceiptCanvas(
   femaleHbC,
   femaleNotes,
   maleStatus,
-  femaleStatus
+  femaleStatus,
+  idnumber,
+  priority
 ) {
   const date = new Date().toLocaleDateString("ar-AE", {
     year: "numeric",
@@ -96,6 +98,16 @@ function createReceiptCanvas(
     ctx.fillText("مخبر ما قبل الزواج", centerX, 100);
     ctx.font = "bold 16px Cairo";
     ctx.fillText(`التاريخ : ${date} م`, centerX, 140);
+    if (priority === 1) {
+      ctx.strokeStyle = "black";
+      ctx.fillStyle = "#EEEEEE";
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(widthPx - 265, 135, 70, 23); // x, y, width, height
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 16px Cairo";
+      ctx.fillText(`مُستعجل`, widthPx - 230, 150);
+    }
+
     // الخط اسفل الهيدر
     ctx.beginPath();
     ctx.moveTo(75, 160); // x1, y1
@@ -107,6 +119,13 @@ function createReceiptCanvas(
     // ------------------------------------- الخاطب ----------------------------------------------
     // عرض مربع بيانات الخطيب فقط إذا لم يكن دعوة شرعية أو لا توجد زوجة
     if (femaleStatus !== "LEGAL_INVITATION" || maleStatus !== "NOT_EXIST") {
+      if (maleStatus === "OUT_OF_COUNTRY") {
+        ctx.font = "bold 16px Cairo";
+        ctx.fillText(`خارج القطر`, widthPx - 600, 150);
+      } else if (maleStatus === "OUT_OF_PROVINCE") {
+      }
+      ctx.font = "bold 16px Cairo";
+      ctx.fillText(`ID : M${idnumber} `, widthPx - 150, 150);
       // مستطيل الخطيب
       ctx.strokeStyle = "black";
       ctx.lineWidth = 1.5;
@@ -350,6 +369,8 @@ function createReceiptCanvas(
     // ------------------------------------- الخطيبة ----------------------------------------------
     // عرض مربع بيانات الخطيبة فقط إذا لم تكن دعوة شرعية أو لا يوجد زوج
     if (maleStatus !== "LEGAL_INVITATION" && femaleStatus !== "NOT_EXIST") {
+      ctx.font = "bold 16px Cairo";
+      ctx.fillText(`F${idnumber} |`, widthPx - 75, 150);
       // مستطيل الخطيبة
       ctx.strokeStyle = "black";
       ctx.lineWidth = 1.5;
@@ -611,7 +632,7 @@ function createReceiptCanvas(
           const isMalePositive = maleBloodType && maleBloodType.includes("+");
 
           if (isFemaleNegative && isMalePositive) {
-            femaleNoteText = `زمرة الخطيبة سلبي , يرجى الانتباه عند الحمل والإسقاط`;
+            femaleNoteText = `زمرة الخطيبة سلبي , يرجى الانتباه عند الولادة والإسقاط`;
             ctx.strokeStyle = "black";
             ctx.fillStyle = "#EEEEEE";
             ctx.lineWidth = 1.5;
@@ -714,6 +735,8 @@ function initializeParameters(params) {
     femaleNotes: "",
     maleStatus: "",
     femaleStatus: "",
+    idnumber: "",
+    priority: "",
   };
 
   // دمج المعاملات المرسلة مع القيم الافتراضية
@@ -773,6 +796,8 @@ async function printReceipt(params) {
     femaleNotes,
     maleStatus,
     femaleStatus,
+    idnumber,
+    priority,
   } = initializeParameters(params);
   try {
     console.log("🖨️ بدء طباعة الإيصال (A4)...");
@@ -827,7 +852,9 @@ async function printReceipt(params) {
       femaleHbC,
       femaleNotes,
       maleStatus,
-      femaleStatus
+      femaleStatus,
+      idnumber,
+      priority
     );
 
     const dataUrl = canvas.toDataURL("image/png");
