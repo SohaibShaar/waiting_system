@@ -242,8 +242,8 @@ function createReceiptCanvas(
         maleThirdLineX
       );
 
-      // عرض قسم الخضاب الشاذة فقط إذا كان مفعلاً لدى أي من الخطيب أو الخطيبة
-      if (maleHemoglobinEnabled || femaleHemoglobinEnabled) {
+      // عرض قسم الخضاب الشاذة للخطيب فقط إذا كان مفعلاً لديه
+      if (maleHemoglobinEnabled) {
         const maleFourthLineX = 370;
         ctx.fillStyle = "#000000";
         ctx.font = "bold 18px Cairo";
@@ -327,33 +327,73 @@ function createReceiptCanvas(
       ctx.fillStyle = "#000000";
       ctx.font = "bold 18px Cairo";
       ctx.textAlign = "right";
-      ctx.fillText(`ملاحظات الطبيبة :`, widthPx - 90, 490); // HbC
+      ctx.fillText(`ملاحظات الطبيبة :`, widthPx - 90, 490);
 
       // تحديد الرسالة المناسبة للزوج حسب نتائج الفحوصات
-      let maleNoteText = maleNotes;
-      if (!maleNoteText) {
+      let maleNoteText = maleNotes || "";
+      if (!maleNoteText || maleNoteText.trim() === "") {
         // فحص إذا كان أي من الفحوصات إيجابي
         const hasPositiveTest =
           HIVstatus === "POSITIVE" ||
           HBSstatus === "POSITIVE" ||
           HBCstatus === "POSITIVE";
 
-        // فحص إذا كان الخضاب الشاذة مفعل
-        if (
-          hasPositiveTest ||
-          maleHemoglobinEnabled ||
-          femaleHemoglobinEnabled
-        ) {
-          maleNoteText = ""; // لا تظهر رسالة إيجابية إذا كان هناك فحص إيجابي أو خضاب شاذة مفعل
+        // فحص إذا كان الخضاب الشاذة مفعل للزوج فقط
+        const hasAbnormalHemoglobin = maleHemoglobinEnabled;
+
+        // بناء الرسالة بناءً على الحالات المختلفة (يمكن دمج عدة رسائل)
+        let messages = [];
+
+        // 1. إضافة ملاحظة الخضاب الشاذة للزوج فقط
+        if (hasAbnormalHemoglobin) {
+          messages.push("يوجد خضاب شاذة , يرجى مراجعة النتائج");
+        }
+
+        // 2. إضافة ملاحظة الفحوصات الإيجابية
+        if (hasPositiveTest) {
+          let positiveTests = [];
+          if (HIVstatus === "POSITIVE") positiveTests.push("HIV");
+          if (HBSstatus === "POSITIVE") positiveTests.push("HBV");
+          if (HBCstatus === "POSITIVE") positiveTests.push("HCV");
+          messages.push(`يوجد فحص إيجابي: ${positiveTests.join(" , ")}`);
+        }
+
+        // 3. تحديد الرسالة النهائية
+        if (messages.length > 0) {
+          maleNoteText = messages.join(" . ");
         } else {
+          // جميع الفحوصات سليمة
           maleNoteText = `جميع الفحوصات والتحاليل المجراة في المخبر لدينا سليمة, لا مانع من زواجه`;
         }
       }
 
-      ctx.fillStyle = "#000000";
-      ctx.font = "18px Cairo";
-      ctx.textAlign = "right";
-      ctx.fillText(maleNoteText, widthPx - 100, 515);
+      // طباعة الملاحظات
+      if (maleNoteText && maleNoteText.trim() !== "") {
+        ctx.fillStyle = "#000000";
+        ctx.font = "18px Cairo";
+        ctx.textAlign = "right";
+
+        // تقسيم النص إلى أسطر متعددة إذا كان طويلاً
+        const maxWidth = 600;
+        const lineHeight = 25;
+        const words = maleNoteText.split(" ");
+        let line = "";
+        let y = 515;
+
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + " ";
+          const metrics = ctx.measureText(testLine);
+
+          if (metrics.width > maxWidth && i > 0) {
+            ctx.fillText(line, widthPx - 100, y);
+            line = words[i] + " ";
+            y += lineHeight;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, widthPx - 100, y);
+      }
     } // نهاية شرط عرض مربع بيانات الخطيب
     else {
       // مستطيل الخطيب
@@ -487,8 +527,8 @@ function createReceiptCanvas(
         femaleThirdLineX
       );
 
-      // عرض قسم الخضاب الشاذة للزوجة فقط إذا كان مفعلاً لدى أي من الخطيب أو الخطيبة
-      if (maleHemoglobinEnabled || femaleHemoglobinEnabled) {
+      // عرض قسم الخضاب الشاذة للزوجة فقط إذا كان مفعلاً لديها
+      if (femaleHemoglobinEnabled) {
         const femaleFourthLineX = 790;
         ctx.fillStyle = "#000000";
         ctx.font = "bold 18px Cairo";
@@ -604,67 +644,113 @@ function createReceiptCanvas(
       ctx.fillStyle = "#000000";
       ctx.font = "bold 18px Cairo";
       ctx.textAlign = "right";
-      ctx.fillText(`ملاحظات الطبيبة :`, widthPx - 90, 910); // HbC
-      ctx.fillStyle = "#000000";
-      ctx.font = "18px Cairo";
-      ctx.textAlign = "right";
+      ctx.fillText(`ملاحظات الطبيبة :`, widthPx - 90, 910);
 
       // تحديد الرسالة المناسبة للزوجة حسب نتائج الفحوصات وفصيلة الدم
-      let femaleNoteText = femaleNotes;
-      if (!femaleNoteText || femaleNoteText === "") {
+      let femaleNoteText = femaleNotes || "";
+      let needsHighlight = false;
+
+      // فحص تضارب الزمر الدموية (يتم دائماً بغض النظر عن الملاحظات المخصصة)
+      const isFemaleNegative = femaleBloodType && femaleBloodType.includes("-");
+      const isMalePositive = maleBloodType && maleBloodType.includes("+");
+      const hasBloodTypeConflict = isFemaleNegative && isMalePositive;
+
+      if (!femaleNoteText || femaleNoteText.trim() === "") {
         // فحص إذا كان أي من فحوصات الزوجة إيجابي
         const hasFemalePositiveTest =
           femaleHIVstatus === "POSITIVE" ||
           femaleHBSstatus === "POSITIVE" ||
           femaleHBCstatus === "POSITIVE";
 
-        // فحص إذا كان الخضاب الشاذة مفعل
-        if (
-          hasFemalePositiveTest ||
-          maleHemoglobinEnabled ||
-          femaleHemoglobinEnabled
-        ) {
-          // فحص إذا كانت فصيلة الخطيبة سالبة وفصيلة الخطيب موجبة
-          const isFemaleNegative =
-            femaleBloodType && femaleBloodType.includes("-");
-          const isMalePositive = maleBloodType && maleBloodType.includes("+");
+        // فحص إذا كان الخضاب الشاذة مفعل للزوجة فقط
+        const hasAbnormalHemoglobin = femaleHemoglobinEnabled;
 
-          if (isFemaleNegative && isMalePositive) {
-            ctx.fillStyle = "#000000";
-            ctx.font = "18px Cairo";
-            ctx.textAlign = "right";
-            femaleNoteText = `زمرة الخطيبة سلبي , يرجى الانتباه عند الولادة والإسقاط`;
-            ctx.strokeStyle = "black";
-            ctx.fillStyle = "#EEEEEE";
-            ctx.lineWidth = 1.5;
-            ctx.fillRect(137, 955, 560, 23); // x, y, width, height
-          } else {
-            femaleNoteText = ``;
-          } // لا تظهر رسالة إيجابية إذا كان هناك فحص إيجابي أو خضاب شاذة مفعل
-        } else {
-          // فحص إذا كانت فصيلة الخطيبة سالبة وفصيلة الخطيب موجبة
-          const isFemaleNegative =
-            femaleBloodType && femaleBloodType.includes("-");
-          const isMalePositive = maleBloodType && maleBloodType.includes("+");
+        // بناء الرسالة بناءً على الحالات المختلفة (يمكن دمج عدة رسائل)
+        let messages = [];
 
-          if (isFemaleNegative && isMalePositive) {
-            ctx.strokeStyle = "black";
-            ctx.fillStyle = "#EEEEEE";
-            ctx.lineWidth = 1.5;
-            ctx.fillRect(137, 955, 560, 23); // x, y, width, height
-            ctx.fillStyle = "#000000";
-            ctx.font = "18px Cairo";
-            ctx.textAlign = "right";
-            femaleNoteText = `زمرة الخطيبة سلبي , يرجى الانتباه عند الولادة والإسقاط`;
-            ctx.fillText(femaleNoteText, widthPx - 100, 971);
-          } else {
-            ctx.fillStyle = "#000000";
-            ctx.font = "18px Cairo";
-            ctx.textAlign = "right";
-            femaleNoteText = `جميع الفحوصات والتحاليل المجراة في المخبر لدينا سليمة, لا مانع من زواجها`;
-            ctx.fillText(femaleNoteText, widthPx - 100, 936);
-          }
+        // 1. إضافة رسالة تضارب الزمر (أولوية قصوى)
+        if (hasBloodTypeConflict) {
+          messages.push(
+            "زمرة دم الخطيبة سلبي و الخطيب إيجابي , يرجى الانتباه عند الولادة والإسقاط"
+          );
+          needsHighlight = true;
         }
+
+        // 2. إضافة ملاحظة الخضاب الشاذة للزوجة فقط
+        if (hasAbnormalHemoglobin) {
+          messages.push("يوجد خضاب شاذة , يرجى مراجعة النتائج");
+        }
+
+        // 3. إضافة ملاحظة الفحوصات الإيجابية
+        if (hasFemalePositiveTest) {
+          let positiveTests = [];
+          if (femaleHIVstatus === "POSITIVE") positiveTests.push("HIV");
+          if (femaleHBSstatus === "POSITIVE") positiveTests.push("HBV");
+          if (femaleHBCstatus === "POSITIVE") positiveTests.push("HCV");
+          messages.push(`يوجد فحص إيجابي: ${positiveTests.join(" , ")}`);
+        }
+
+        // 4. تحديد الرسالة النهائية
+        if (messages.length > 0) {
+          femaleNoteText = messages.join(" . ");
+        } else {
+          // جميع الفحوصات سليمة ولا يوجد تضارب
+          femaleNoteText = `جميع الفحوصات والتحاليل المجراة في المخبر لدينا سليمة, لا مانع من زواجها`;
+        }
+      } else {
+        // إذا كان هناك ملاحظات مخصصة، نضيف رسالة تضارب الزمر في سطر جديد
+        if (hasBloodTypeConflict) {
+          femaleNoteText +=
+            "\nزمرة دم الخطيبة سلبي و الخطيب إيجابي , يرجى الانتباه عند الولادة والإسقاط";
+          needsHighlight = true;
+        }
+      }
+
+      // طباعة الملاحظات
+      if (femaleNoteText && femaleNoteText.trim() !== "") {
+        // رسم خلفية رمادية إذا كانت هناك حاجة للتنبيه
+        if (needsHighlight) {
+          ctx.strokeStyle = "black";
+          ctx.fillStyle = "#EEEEEE";
+          ctx.lineWidth = 1.5;
+          ctx.fillRect(137, 955, 560, 23);
+        }
+
+        ctx.fillStyle = "#000000";
+        ctx.font = "18px Cairo";
+        ctx.textAlign = "right";
+
+        // تقسيم النص إلى أسطر متعددة (دعم \n والنصوص الطويلة)
+        const maxWidth = 600;
+        const lineHeight = 25;
+        let y = needsHighlight ? 946 : 936;
+
+        // تقسيم النص حسب الأسطر الجديدة أولاً
+        const paragraphs = femaleNoteText.split("\n");
+
+        paragraphs.forEach((paragraph, index) => {
+          const words = paragraph.split(" ");
+          let line = "";
+
+          for (let i = 0; i < words.length; i++) {
+            const testLine = line + words[i] + " ";
+            const metrics = ctx.measureText(testLine);
+
+            if (metrics.width > maxWidth && i > 0) {
+              ctx.fillText(line, widthPx - 100, y);
+              line = words[i] + " ";
+              y += lineHeight;
+            } else {
+              line = testLine;
+            }
+          }
+          ctx.fillText(line, widthPx - 100, y);
+
+          // إضافة مسافة بين الفقرات (إلا إذا كانت آخر فقرة)
+          if (index < paragraphs.length - 1) {
+            y += lineHeight;
+          }
+        });
       }
     } // نهاية شرط عرض مربع بيانات الخطيبة
     else {
