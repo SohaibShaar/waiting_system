@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
-import printReceipt from "../utils/doctorFormPrinter";
+import printReceipt, {
+  printMultipleReceipts,
+} from "../utils/doctorFormPrinter";
 import { API_BASE_URL } from "../services/api";
 
 const API_URL = API_BASE_URL;
@@ -170,9 +172,23 @@ const DoctorPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [priorityFilter, setPriorityFilter] = useState<
+    "all" | "urgent" | "normal"
+  >("all"); // فلتر الأولوية
+
+  // حالات الطباعة المتعددة
+  const [selectedRecords, setSelectedRecords] = useState<Set<number>>(
+    new Set()
+  );
+  const [showBulkPrintOptions, setShowBulkPrintOptions] = useState(false);
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
 
   // مرجع للتمرير إلى أعلى المحتوى
   const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // مرجع لتتبع آخر قيمة للفلتر
+  const prevPriorityFilterRef = useRef(priorityFilter);
 
   // دوال مساعدة للتحكم في عرض الأقسام
   const shouldShowMaleSection = () => {
@@ -429,39 +445,270 @@ const DoctorPage = () => {
   const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
   // تحميل قائمة البيانات المكتملة
-  const loadCompletedData = async (page = 1, search = "") => {
+  const loadCompletedData = useCallback(
+    async (page = 1, search = "", priority = priorityFilter) => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: "15",
+          ...(search && { search }),
+          ...(priority !== "all" && {
+            priority: priority === "urgent" ? "1" : "0",
+          }),
+        });
+        const response = await axios.get(
+          `${API_URL}/doctor/completed?${params}`
+        );
+        if (response.data.success) {
+          setCompletedData(response.data.data);
+          setTotalPages(response.data.totalPages);
+          setTotalCount(response.data.total);
+          setCurrentPage(page);
+          setShowCompletedList(true);
+        }
+      } catch (error) {
+        console.error("خطأ في تحميل البيانات المكتملة:", error);
+        alert("❌ حدث خطأ في تحميل البيانات");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [priorityFilter]
+  );
+
+  // Handle search and filter changes
+  useEffect(() => {
+    if (showCompletedList) {
+      // تحقق إذا تغير الفلتر
+      const filterChanged = prevPriorityFilterRef.current !== priorityFilter;
+
+      // حدث المرجع
+      prevPriorityFilterRef.current = priorityFilter;
+
+      // إذا تغير الفلتر، نحدث فوراً بدون debounce
+      // إذا تغير البحث فقط، نستخدم debounce
+      const delay = filterChanged ? 0 : 500;
+
+      const timer = setTimeout(() => {
+        loadCompletedData(1, searchTerm, priorityFilter);
+      }, delay);
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm, priorityFilter, showCompletedList, loadCompletedData]);
+
+  // دوال الطباعة المتعددة
+  const toggleRecordSelection = (id: number) => {
+    const newSelected = new Set(selectedRecords);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedRecords(newSelected);
+  };
+
+  const selectAll = () => {
+    const allIds = new Set(completedData.map((item) => item.id));
+    setSelectedRecords(allIds);
+  };
+
+  const deselectAll = () => {
+    setSelectedRecords(new Set());
+  };
+
+  const selectByRange = async () => {
+    const start = parseInt(rangeStart);
+    const end = parseInt(rangeEnd);
+
+    if (isNaN(start) || isNaN(end)) {
+      alert("⚠️ يرجى إدخال أرقام صحيحة");
+      return;
+    }
+
+    if (start > end) {
+      alert("⚠️ رقم البداية يجب أن يكون أصغر من رقم النهاية");
+      return;
+    }
+
     try {
       setLoading(true);
+
+      // جلب جميع السجلات في النطاق المحدد مع الفلترة
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: "15",
-        ...(search && { search }),
+        queueIdStart: start.toString(),
+        queueIdEnd: end.toString(),
+        ...(searchTerm && { search: searchTerm }),
+        ...(priorityFilter !== "all" && {
+          priority: priorityFilter === "urgent" ? "1" : "0",
+        }),
       });
-      const response = await axios.get(`${API_URL}/doctor/completed?${params}`);
-      if (response.data.success) {
-        setCompletedData(response.data.data);
-        setTotalPages(response.data.totalPages);
-        setTotalCount(response.data.total);
-        setCurrentPage(page);
-        setShowCompletedList(true);
+
+      const response = await axios.get(
+        `${API_URL}/doctor/completed/range?${params}`
+      );
+
+      if (response.data.success && response.data.data.length > 0) {
+        const rangeIds = new Set<number>(
+          response.data.data.map((item: { id: number }) => item.id)
+        );
+        setSelectedRecords(rangeIds);
+        alert(`✅ تم تحديد ${rangeIds.size} سجل من النطاق ${start} إلى ${end}`);
+      } else {
+        alert("⚠️ لا توجد سجلات في هذا النطاق مع الفلترة الحالية");
       }
     } catch (error) {
-      console.error("خطأ في تحميل البيانات المكتملة:", error);
-      alert("❌ حدث خطأ في تحميل البيانات");
+      console.error("خطأ في تحديد النطاق:", error);
+
+      // Fallback: استخدام البيانات المحلية
+      const rangeIds = new Set(
+        completedData
+          .filter((item) => item.queueId >= start && item.queueId <= end)
+          .map((item) => item.id)
+      );
+
+      if (rangeIds.size === 0) {
+        alert(
+          "⚠️ لا توجد سجلات في هذا النطاق في الصفحة الحالية. جاري البحث في جميع الصفحات..."
+        );
+        return;
+      }
+
+      setSelectedRecords(rangeIds);
+      alert(`✅ تم تحديد ${rangeIds.size} سجل من الصفحة الحالية`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle search with debounce
-  useEffect(() => {
-    if (showCompletedList) {
-      const timer = setTimeout(() => {
-        loadCompletedData(1, searchTerm);
-      }, 500);
-      return () => clearTimeout(timer);
+  const handleBulkPrint = async () => {
+    if (selectedRecords.size === 0) {
+      alert("⚠️ يرجى اختيار سجل واحد على الأقل للطباعة");
+      return;
     }
-  }, [searchTerm, showCompletedList]);
+
+    if (!window.confirm(`هل تريد طباعة ${selectedRecords.size} سجل؟`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // جلب بيانات السجلات المحددة من الخادم (قد تكون من صفحات مختلفة)
+      const selectedIds = Array.from(selectedRecords);
+      const response = await axios.post(`${API_URL}/doctor/completed/bulk`, {
+        ids: selectedIds,
+      });
+
+      let selectedItems: typeof completedData;
+      if (response.data.success && response.data.data.length > 0) {
+        selectedItems = response.data.data;
+      } else {
+        // Fallback: استخدام البيانات المحلية
+        selectedItems = completedData.filter((item) =>
+          selectedRecords.has(item.id)
+        );
+      }
+
+      // تحضير بيانات الطباعة لكل سجل
+      const printDataArray = selectedItems.map((item) => {
+        const shouldShowMaleForItem =
+          item.ReceptionData?.femaleStatus !== "LEGAL_INVITATION";
+        const shouldShowFemaleForItem =
+          item.ReceptionData?.maleStatus !== "LEGAL_INVITATION";
+
+        // التحقق من وجود فصيلة الدم
+        const hasMaleBloodType = shouldShowMaleForItem
+          ? item.DoctorData?.maleBloodType
+          : true;
+        const hasFemaleBloodType = shouldShowFemaleForItem
+          ? item.DoctorData?.femaleBloodType
+          : true;
+
+        if (!hasMaleBloodType || !hasFemaleBloodType) {
+          throw new Error(`فصيلة الدم غير مكتملة للسجل #${item.queueId}`);
+        }
+
+        return {
+          // بيانات الزوج
+          ...(shouldShowMaleForItem && {
+            maleName: item.ReceptionData?.maleName || "",
+            maleLastName: item.ReceptionData?.maleLastName || "",
+            maleFatherName: item.ReceptionData?.maleFatherName || "",
+            maleAge: item.ReceptionData?.maleAge || 0,
+            maleNationalId: item.ReceptionData?.maleNationalId || "",
+            maleBirthDate: formatDate(item.ReceptionData?.maleBirthDate || ""),
+            maleBirthPlace: item.ReceptionData?.maleBirthPlace || "",
+            maleBloodType: item.DoctorData?.maleBloodType || "",
+            HIVstatus: item.DoctorData?.maleHIVstatus || "NEGATIVE",
+            HBSstatus: item.DoctorData?.maleHBSstatus || "NEGATIVE",
+            HBCstatus: item.DoctorData?.maleHBCstatus || "NEGATIVE",
+            maleHIVvalue: item.DoctorData?.maleHIVvalue || "",
+            maleHBSvalue: item.DoctorData?.maleHBSvalue || "",
+            maleHBCvalue: item.DoctorData?.maleHBCvalue || "",
+            maleHemoglobinEnabled:
+              item.DoctorData?.maleHemoglobinEnabled || false,
+            maleHbS: item.DoctorData?.maleHbS || "",
+            maleHbF: item.DoctorData?.maleHbF || "",
+            maleHbA1c: item.DoctorData?.maleHbA1c || "",
+            maleHbA2: item.DoctorData?.maleHbA2 || "",
+            maleHbSc: item.DoctorData?.maleHbSc || "",
+            maleHbD: item.DoctorData?.maleHbD || "",
+            maleHbE: item.DoctorData?.maleHbE || "",
+            maleHbC: item.DoctorData?.maleHbC || "",
+            maleNotes: item.DoctorData?.maleNotes || "",
+          }),
+          // بيانات الزوجة
+          ...(shouldShowFemaleForItem && {
+            femaleName: item.ReceptionData?.femaleName || "",
+            femaleLastName: item.ReceptionData?.femaleLastName || "",
+            femaleFatherName: item.ReceptionData?.femaleFatherName || "",
+            femaleAge: item.ReceptionData?.femaleAge || 0,
+            femaleNationalId: item.ReceptionData?.femaleNationalId || "",
+            femaleBirthDate: formatDate(
+              item.ReceptionData?.femaleBirthDate || ""
+            ),
+            femaleBirthPlace: item.ReceptionData?.femaleBirthPlace || "",
+            femaleBloodType: item.DoctorData?.femaleBloodType || "",
+            femaleHIVstatus: item.DoctorData?.femaleHIVstatus || "NEGATIVE",
+            femaleHBSstatus: item.DoctorData?.femaleHBSstatus || "NEGATIVE",
+            femaleHBCstatus: item.DoctorData?.femaleHBCstatus || "NEGATIVE",
+            femaleHIVvalue: item.DoctorData?.femaleHIVvalue || "",
+            femaleHBSvalue: item.DoctorData?.femaleHBSvalue || "",
+            femaleHBCvalue: item.DoctorData?.femaleHBCvalue || "",
+            femaleHemoglobinEnabled:
+              item.DoctorData?.femaleHemoglobinEnabled || false,
+            femaleHbS: item.DoctorData?.femaleHbS || "",
+            femaleHbF: item.DoctorData?.femaleHbF || "",
+            femaleHbA1c: item.DoctorData?.femaleHbA1c || "",
+            femaleHbA2: item.DoctorData?.femaleHbA2 || "",
+            femaleHbSc: item.DoctorData?.femaleHbSc || "",
+            femaleHbD: item.DoctorData?.femaleHbD || "",
+            femaleHbE: item.DoctorData?.femaleHbE || "",
+            femaleHbC: item.DoctorData?.femaleHbC || "",
+            femaleNotes: item.DoctorData?.femaleNotes || "",
+          }),
+          maleStatus: item.ReceptionData?.maleStatus || "",
+          femaleStatus: item.ReceptionData?.femaleStatus || "",
+          idnumber: item.queueId || "",
+          priority: item.priority || "",
+        };
+      });
+
+      // طباعة جميع السجلات
+      await printMultipleReceipts(printDataArray);
+
+      deselectAll();
+    } catch (error: unknown) {
+      console.error("❌ خطأ في الطباعة المتعددة:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "حدث خطأ غير متوقع";
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // تحديث البيانات عند العودة من صفحة التعديل
   useEffect(() => {
@@ -640,9 +887,165 @@ const DoctorPage = () => {
                   ❌ إغلاق
                 </button>
               </div>
+              {/* أزرار الطباعة المتعددة */}
+              {completedData.length > 0 && (
+                <div className='mb-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200'>
+                  <div className='flex flex-col gap-4'>
+                    {/* العنوان وعداد السجلات المحددة */}
+                    <div className='flex justify-between items-center'>
+                      <h3
+                        className='text-lg font-bold'
+                        style={{ color: "var(--primary)" }}>
+                        🖨️ طباعة متعددة
+                      </h3>
+                      {selectedRecords.size > 0 && (
+                        <span className='px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-semibold text-sm'>
+                          تم تحديد {selectedRecords.size} سجل
+                        </span>
+                      )}
+                    </div>
+
+                    {/* أزرار التحديد السريع */}
+                    <div className='flex flex-wrap gap-2'>
+                      <button
+                        onClick={deselectAll}
+                        disabled={loading}
+                        className='px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 text-sm'>
+                        ❌ إلغاء التحديد
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          setShowBulkPrintOptions(!showBulkPrintOptions)
+                        }
+                        className={`px-4 py-2 text-white rounded-lg text-sm transition-all duration-300 cursor-pointer ${
+                          showBulkPrintOptions
+                            ? "bg-[#054239]/80 text-white"
+                            : "bg-[#054239] text-gray-700 "
+                        }`}>
+                        🔢 تحديد بالنطاق
+                      </button>
+                    </div>
+
+                    {/* خيارات التحديد بالنطاق */}
+                    {showBulkPrintOptions && (
+                      <div className='p-4 bg-white rounded-lg border border-gray-300'>
+                        {/* فلتر الأولوية */}
+                        <div className='flex items-center gap-3 pb-3'>
+                          <span className='font-semibold text-sm'>فلترة :</span>
+                          <div className='flex gap-2'>
+                            <button
+                              onClick={() => {
+                                setPriorityFilter("all");
+                                deselectAll();
+                              }}
+                              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                priorityFilter === "all"
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              }`}>
+                              الكل ({totalCount})
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPriorityFilter("urgent");
+                                deselectAll();
+                              }}
+                              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                priorityFilter === "urgent"
+                                  ? "bg-orange-600 text-white"
+                                  : "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                              }`}>
+                              ⚡ مستعجل
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPriorityFilter("normal");
+                                deselectAll();
+                              }}
+                              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                priorityFilter === "normal"
+                                  ? "bg-green-600 text-white"
+                                  : "bg-green-100 text-green-800 hover:bg-green-200"
+                              }`}>
+                              📋 عادي
+                            </button>
+                          </div>
+                        </div>
+                        {/* فاصل */}
+                        <h4 className='font-semibold mb-3 text-sm'>
+                          تحديد السجلات حسب رقم الدور:
+                        </h4>
+                        <div className='flex w-[40%] gap-3 items-end'>
+                          <div className='flex-1 min-w-[120px]'>
+                            <label className='block text-xs font-semibold mb-1'>
+                              من رقم:
+                            </label>
+                            <input
+                              type='number'
+                              value={rangeStart}
+                              onChange={(e) => setRangeStart(e.target.value)}
+                              placeholder='مثال: 1'
+                              className='input-field w-full text-sm'
+                            />
+                          </div>
+                          <div className='flex-1 min-w-[120px]'>
+                            <label className='block text-xs font-semibold mb-1'>
+                              إلى رقم:
+                            </label>
+                            <input
+                              type='number'
+                              value={rangeEnd}
+                              onChange={(e) => setRangeEnd(e.target.value)}
+                              placeholder='مثال: 10'
+                              className='input-field w-full text-sm'
+                            />
+                          </div>
+                          <button
+                            onClick={selectByRange}
+                            disabled={loading || !rangeStart || !rangeEnd}
+                            className='px-4 py-2 bg-[#054239] text-white rounded-lg hover:bg-[#054239]/80 disabled:opacity-50 text-sm transition-all duration-300 cursor-pointer'>
+                            تطبيق
+                          </button>
+                        </div>
+                        <p className='text-xs text-gray-600 mt-2'>
+                          💡 مثال: لطباعة السجلات من 5 إلى 20، أدخل 5 في "من
+                          رقم" و 20 في "إلى رقم"
+                        </p>
+                        <p className='text-xs text-blue-600 mt-1 font-semibold'>
+                          ℹ️ التحديد يعمل عبر جميع الصفحات مع مراعاة الفلترة
+                          الحالية (
+                          {priorityFilter === "all"
+                            ? "الكل"
+                            : priorityFilter === "urgent"
+                            ? "المستعجل"
+                            : "العادي"}
+                          )
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedRecords.size != 0 && (
+                    <button
+                      onClick={handleBulkPrint}
+                      disabled={loading || selectedRecords.size === 0}
+                      className='my-3 p-3 bg-[#054239] text-white rounded-lg hover:bg-[#054239]/80 disabled:opacity-50 font-bold text-lg'>
+                      {loading
+                        ? "⏳ جاري التحضير..."
+                        : `🖨️ طباعة ${
+                            selectedRecords.size > 0
+                              ? `(${selectedRecords.size})`
+                              : ""
+                          } سجلات`}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Filters */}
-              <div className='mb-6'>
+              <div className='mb-6 space-y-4'>
+                {/* البحث */}
                 <input
                   type='text'
                   value={searchTerm}
@@ -667,6 +1070,23 @@ const DoctorPage = () => {
                     <table className='w-full'>
                       <thead>
                         <tr style={{ backgroundColor: "var(--light)" }}>
+                          <th className='p-3 text-center w-12'>
+                            <input
+                              type='checkbox'
+                              checked={
+                                selectedRecords.size === completedData.length &&
+                                completedData.length > 0
+                              }
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  selectAll();
+                                } else {
+                                  deselectAll();
+                                }
+                              }}
+                              className='w-5 h-5 cursor-pointer'
+                            />
+                          </th>
                           <th className='p-3 text-center'>رقم الدور</th>
                           <th className='p-3 text-center'>رقم الـ ID</th>
                           <th className='p-3 text-center'>اسم الخطيب</th>
@@ -682,7 +1102,17 @@ const DoctorPage = () => {
                         {completedData.map((item) => (
                           <tr
                             key={item.id}
-                            className='border-b hover:bg-gray-50'>
+                            className={`border-b hover:bg-gray-50 ${
+                              selectedRecords.has(item.id) ? "bg-blue-50" : ""
+                            }`}>
+                            <td className='p-3 text-center'>
+                              <input
+                                type='checkbox'
+                                checked={selectedRecords.has(item.id)}
+                                onChange={() => toggleRecordSelection(item.id)}
+                                className='w-5 h-5 cursor-pointer'
+                              />
+                            </td>
                             <td className='p-3'>#{item.queueId}</td>
                             <td className='p-3'>
                               {item.patient?.id.toString() || "غير متوفر"}

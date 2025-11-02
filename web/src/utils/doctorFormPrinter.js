@@ -1052,4 +1052,239 @@ async function printReceipt(params) {
   }
 }
 
+// دالة لطباعة عدة سجلات في ملف PDF واحد بصفحات متعددة
+async function printMultipleReceipts(recordsArray) {
+  if (!recordsArray || recordsArray.length === 0) {
+    alert("⚠️ لا توجد سجلات للطباعة");
+    return false;
+  }
+
+  try {
+    console.log(`🖨️ بدء طباعة ${recordsArray.length} سجل...`);
+
+    // إنشاء جميع الصفحات
+    const canvasPromises = recordsArray.map((params) => {
+      const {
+        maleName,
+        maleLastName,
+        maleFatherName,
+        maleAge,
+        maleNationalId,
+        maleBirthDate,
+        maleBirthPlace,
+        maleBloodType,
+        HIVstatus,
+        HBSstatus,
+        HBCstatus,
+        maleHIVvalue,
+        maleHBSvalue,
+        maleHBCvalue,
+        maleHemoglobinEnabled,
+        maleHbS,
+        maleHbF,
+        maleHbA1c,
+        maleHbA2,
+        maleHbSc,
+        maleHbD,
+        maleHbE,
+        maleHbC,
+        maleNotes,
+        femaleName,
+        femaleLastName,
+        femaleFatherName,
+        femaleAge,
+        femaleNationalId,
+        femaleBirthDate,
+        femaleBirthPlace,
+        femaleBloodType,
+        femaleHIVstatus,
+        femaleHBSstatus,
+        femaleHBCstatus,
+        femaleHIVvalue,
+        femaleHBSvalue,
+        femaleHBCvalue,
+        femaleHemoglobinEnabled,
+        femaleHbS,
+        femaleHbF,
+        femaleHbA1c,
+        femaleHbA2,
+        femaleHbSc,
+        femaleHbD,
+        femaleHbE,
+        femaleHbC,
+        femaleNotes,
+        maleStatus,
+        femaleStatus,
+        idnumber,
+        priority,
+      } = initializeParameters(params);
+
+      return createReceiptCanvas(
+        maleName,
+        maleLastName,
+        maleFatherName,
+        maleAge,
+        maleNationalId,
+        maleBirthDate,
+        maleBirthPlace,
+        maleBloodType,
+        HIVstatus,
+        HBSstatus,
+        HBCstatus,
+        maleHIVvalue,
+        maleHBSvalue,
+        maleHBCvalue,
+        maleHemoglobinEnabled,
+        maleHbS,
+        maleHbF,
+        maleHbA1c,
+        maleHbA2,
+        maleHbSc,
+        maleHbD,
+        maleHbE,
+        maleHbC,
+        maleNotes,
+        femaleName,
+        femaleLastName,
+        femaleFatherName,
+        femaleAge,
+        femaleNationalId,
+        femaleBirthDate,
+        femaleBirthPlace,
+        femaleBloodType,
+        femaleHIVstatus,
+        femaleHBSstatus,
+        femaleHBCstatus,
+        femaleHIVvalue,
+        femaleHBSvalue,
+        femaleHBCvalue,
+        femaleHemoglobinEnabled,
+        femaleHbS,
+        femaleHbF,
+        femaleHbA1c,
+        femaleHbA2,
+        femaleHbSc,
+        femaleHbD,
+        femaleHbE,
+        femaleHbC,
+        femaleNotes,
+        maleStatus,
+        femaleStatus,
+        idnumber,
+        priority
+      );
+    });
+
+    // انتظار إنشاء جميع الصفحات
+    const canvases = await Promise.all(canvasPromises);
+
+    // تحويل جميع الصفحات إلى صور
+    const dataUrls = canvases.map((canvas) => canvas.toDataURL("image/png"));
+
+    // إنشاء iframe للطباعة
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+
+    // إنشاء HTML يحتوي على جميع الصفحات
+    const pagesHtml = dataUrls
+      .map(
+        (dataUrl, index) => `
+      <div class="print-page" ${
+        index < dataUrls.length - 1 ? 'style="page-break-after: always;"' : ""
+      }>
+        <img src="${dataUrl}" />
+      </div>
+    `
+      )
+      .join("");
+
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
+            font-family: Arial, sans-serif;
+            background: white;
+            direction: rtl;
+            margin: 0;
+            padding: 0;
+          }
+          .print-page {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+          }
+          .print-page:last-child {
+            page-break-after: avoid;
+          }
+          img {
+            width: 210mm;
+            height: 297mm;
+            object-fit: contain;
+          }
+          @media print {
+            body {
+              margin: 0;
+              padding: 0;
+            }
+            .print-page {
+              page-break-after: always;
+            }
+            .print-page:last-child {
+              page-break-after: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml}
+      </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    iframe.onload = function () {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          console.log(`✅ تم فتح نافذة الطباعة لـ ${recordsArray.length} سجل`);
+
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
+        } catch (e) {
+          console.error("❌ خطأ في الطباعة:", e);
+          document.body.removeChild(iframe);
+        }
+      }, 500); // زيادة الوقت قليلاً للصفحات المتعددة
+    };
+
+    return true;
+  } catch (error) {
+    console.error("❌ خطأ في طباعة السجلات المتعددة:", error);
+    alert(`❌ حدث خطأ في الطباعة: ${error.message}`);
+    return false;
+  }
+}
+
 export default printReceipt;
+export { printMultipleReceipts };

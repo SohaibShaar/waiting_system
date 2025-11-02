@@ -7,6 +7,8 @@ import {
   getCompletedDataById,
   updateCompletedDataController,
   updateCompletedDoctorDataController,
+  getCompletedDataByRange,
+  getCompletedDataBulk,
 } from "../controllers/doctor.controller";
 
 const router = Router();
@@ -22,6 +24,18 @@ router.post("/", addDoctorData);
  * الحصول على جميع البيانات المكتملة
  */
 router.get("/completed", getCompletedData);
+
+/**
+ * GET /api/doctor/completed/range
+ * الحصول على السجلات المكتملة حسب نطاق أرقام الدور
+ */
+router.get("/completed/range", getCompletedDataByRange);
+
+/**
+ * POST /api/doctor/completed/bulk
+ * الحصول على عدة سجلات مكتملة حسب IDs
+ */
+router.post("/completed/bulk", getCompletedDataBulk);
 
 /**
  * GET /api/doctor/completed/:id

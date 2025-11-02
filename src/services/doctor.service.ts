@@ -266,6 +266,10 @@ async function getAllCompletedPatientData(filters?: {
   queueId?: number;
   startDate?: string;
   endDate?: string;
+  priority?: number;
+  queueIdStart?: number;
+  queueIdEnd?: number;
+  ids?: number[];
 }) {
   const page = filters?.page || 1;
   const limit = filters?.limit || 20;
@@ -276,6 +280,10 @@ async function getAllCompletedPatientData(filters?: {
 
   if (filters?.queueId) {
     where.queueId = filters.queueId;
+  }
+
+  if (filters?.ids && filters.ids.length > 0) {
+    where.id = { in: filters.ids };
   }
 
   if (filters?.startDate || filters?.endDate) {
@@ -331,6 +339,25 @@ async function getAllCompletedPatientData(filters?: {
       DoctorData: item.doctorData ? JSON.parse(item.doctorData) : null,
     };
   });
+
+  // Apply priority filter
+  if (filters?.priority !== undefined) {
+    parsedData = parsedData.filter(
+      (item) => item.priority === filters.priority
+    );
+  }
+
+  // Apply queue ID range filter
+  if (
+    filters?.queueIdStart !== undefined ||
+    filters?.queueIdEnd !== undefined
+  ) {
+    const start = filters.queueIdStart || 0;
+    const end = filters.queueIdEnd || Number.MAX_SAFE_INTEGER;
+    parsedData = parsedData.filter(
+      (item) => item.queueId >= start && item.queueId <= end
+    );
+  }
 
   // Apply search filter on parsed data
   if (filters?.search) {

@@ -372,3 +372,101 @@ export async function updateCompletedDoctorDataController(
     });
   }
 }
+
+/**
+ * الحصول على السجلات المكتملة حسب نطاق أرقام الدور
+ * GET /api/doctor/completed/range
+ */
+export async function getCompletedDataByRange(req: Request, res: Response) {
+  try {
+    const { queueIdStart, queueIdEnd, search, priority } = req.query;
+
+    if (!queueIdStart || !queueIdEnd) {
+      return res.status(400).json({
+        success: false,
+        error: "يجب تحديد نطاق أرقام الدور (queueIdStart و queueIdEnd)",
+      });
+    }
+
+    const start = parseInt(queueIdStart as string);
+    const end = parseInt(queueIdEnd as string);
+
+    if (isNaN(start) || isNaN(end)) {
+      return res.status(400).json({
+        success: false,
+        error: "أرقام الدور يجب أن تكون أرقام صحيحة",
+      });
+    }
+
+    if (start > end) {
+      return res.status(400).json({
+        success: false,
+        error: "رقم البداية يجب أن يكون أصغر من أو يساوي رقم النهاية",
+      });
+    }
+
+    const filters: any = {
+      queueIdStart: start,
+      queueIdEnd: end,
+    };
+
+    if (search) filters.search = search as string;
+    if (priority) filters.priority = parseInt(priority as string);
+
+    const result = await getAllCompletedPatientData(filters);
+
+    res.json({
+      success: true,
+      data: result.data,
+      total: result.total,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+
+/**
+ * الحصول على عدة سجلات مكتملة حسب IDs
+ * POST /api/doctor/completed/bulk
+ */
+export async function getCompletedDataBulk(req: Request, res: Response) {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "يجب تحديد مصفوفة من IDs",
+      });
+    }
+
+    // التحقق من أن جميع IDs أرقام صحيحة
+    const validIds = ids.filter((id) => Number.isInteger(id));
+
+    if (validIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "لا توجد IDs صحيحة",
+      });
+    }
+
+    const result = await getAllCompletedPatientData({
+      ids: validIds,
+      limit: validIds.length, // جلب جميع السجلات
+    });
+
+    res.json({
+      success: true,
+      data: result.data,
+      total: result.total,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
