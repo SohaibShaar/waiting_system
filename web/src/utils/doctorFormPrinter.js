@@ -142,7 +142,7 @@ function createReceiptCanvas(
       ctx.textAlign = "right";
       ctx.fillText(`الاسم :`, widthPx - 90, maleFirstLineX);
       ctx.fillStyle = "#000000";
-      ctx.font = "18px Cairo";
+      ctx.font = "15px Cairo";
       ctx.textAlign = "right";
       ctx.fillText(
         `${maleName} ${maleFatherName} ${maleLastName}`,
@@ -188,7 +188,7 @@ function createReceiptCanvas(
       ctx.textAlign = "right";
       ctx.fillText(`مكان الولادة :`, widthPx - 510, maleSecondLineX);
       ctx.fillStyle = "#000000";
-      ctx.font = "18px Cairo";
+      ctx.font = "14px Cairo";
       ctx.textAlign = "right";
       ctx.fillText(`${maleBirthPlace}`, widthPx - 628, maleSecondLineX);
 
@@ -427,7 +427,7 @@ function createReceiptCanvas(
       ctx.textAlign = "right";
       ctx.fillText(`الاسم :`, widthPx - 90, femaleFirstLineX);
       ctx.fillStyle = "#000000";
-      ctx.font = "18px Cairo";
+      ctx.font = "15px Cairo";
       ctx.textAlign = "right";
       ctx.fillText(
         `${femaleName} ${femaleFatherName} ${femaleLastName}`,
@@ -473,7 +473,7 @@ function createReceiptCanvas(
       ctx.textAlign = "right";
       ctx.fillText(`مكان الولادة :`, widthPx - 510, femaleSecondLineX);
       ctx.fillStyle = "#000000";
-      ctx.font = "18px Cairo";
+      ctx.font = "14px Cairo";
       ctx.textAlign = "right";
       ctx.fillText(`${femaleBirthPlace}`, widthPx - 628, femaleSecondLineX);
 
@@ -673,7 +673,10 @@ function createReceiptCanvas(
           messages.push(
             "زمرة دم الخطيبة سلبي و الخطيب إيجابي , يرجى الانتباه عند الولادة والإسقاط"
           );
-          needsHighlight = true;
+          ctx.strokeStyle = "black";
+          ctx.fillStyle = "#EEEEEE";
+          ctx.lineWidth = 1.5;
+          ctx.fillRect(137, 920, 560, 23);
         }
 
         // 2. إضافة ملاحظة الخضاب الشاذة للزوجة فقط
