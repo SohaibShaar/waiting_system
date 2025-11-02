@@ -15,12 +15,14 @@ interface CurrentPatient {
   femaleName: string;
   priority: number;
   ReceptionData?: {
+    maleBirthDate: string;
     maleAge: number;
     femaleAge: number;
     maleName: string;
     maleLastName: string;
     femaleName: string;
     femaleLastName: string;
+    femaleBirthDate: string;
     phoneNumber?: string;
     femaleStatus: string;
     maleStatus: string;
@@ -199,7 +201,7 @@ const LabPage = () => {
         );
 
         if (response.data.success) {
-          alert("✅ تم تحديث بيانات المختبر بنجاح!");
+          alert("✅ تم تحديث بيانات غرفة الفحص الطبي بنجاح!");
           setIsEditMode(false);
           clearFormData();
           // إعادة تحميل الأرشيف
@@ -539,7 +541,7 @@ const LabPage = () => {
                   <h2
                     className='text-2xl font-bold mb-2'
                     style={{ color: "var(--primary)" }}>
-                    محطة المختبر
+                    غرفة الفحص الطبي
                   </h2>
                   <p className='text-sm' style={{ color: "var(--dark)" }}>
                     اضغط على الزر لاستدعاء المراجع التالي
@@ -626,7 +628,15 @@ const LabPage = () => {
                         currentPatient.ReceptionData.maleName != null ? (
                           <div className='flex flex-col gap-1'>
                             <span>{`${currentPatient.ReceptionData.maleName} ${currentPatient.ReceptionData.maleLastName}`}</span>
-                            <span className='text-[14px] text-gray-500'>{`العمر : ${currentPatient.ReceptionData.maleAge} سنة`}</span>
+                            <span className='text-[14px] text-gray-500'>{`العمر : ${
+                              currentPatient.ReceptionData.maleAge
+                            } سنة ( ${new Date(
+                              currentPatient.ReceptionData.maleBirthDate
+                            ).toLocaleDateString("ar-AE", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              year: "numeric",
+                            })} )`}</span>
                           </div>
                         ) : currentPatient.ReceptionData?.maleStatus ===
                           "NOT_EXIST" ? (
@@ -655,7 +665,15 @@ const LabPage = () => {
                       currentPatient.ReceptionData.femaleName != null ? (
                         <div className='flex flex-col gap-1'>
                           <span>{`${currentPatient.ReceptionData.femaleName} ${currentPatient.ReceptionData.femaleLastName}`}</span>
-                          <span className='text-[14px] text-gray-500'>{`العمر : ${currentPatient.ReceptionData.femaleAge} سنة`}</span>
+                          <span className='text-[14px] text-gray-500'>{`العمر : ${
+                            currentPatient.ReceptionData.femaleAge
+                          } سنة ( ${new Date(
+                            currentPatient.ReceptionData.femaleBirthDate
+                          ).toLocaleDateString("ar-AE", {
+                            month: "2-digit",
+                            day: "2-digit",
+                            year: "numeric",
+                          })} )`}</span>
                         </div>
                       ) : currentPatient.ReceptionData?.femaleStatus ===
                         "NOT_EXIST" ? (
@@ -939,7 +957,7 @@ const LabPage = () => {
             top: 0,
           }}>
           <QueueSidebar
-            stationName='المختبر'
+            stationName='غرفة الفحص الطبي'
             currentQueueId={currentPatient?.queueId}
             stationId={stationId}
             onSelectQueue={handleSelectQueueFromSidebar}
@@ -960,7 +978,7 @@ const LabPage = () => {
               <h2
                 className='text-3xl font-bold'
                 style={{ color: "var(--primary)" }}>
-                📁 أرشيف المختبر
+                📁 أرشيف غرفة الفحص الطبي
               </h2>
               <button
                 onClick={() => setShowArchive(false)}

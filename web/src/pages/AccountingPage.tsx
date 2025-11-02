@@ -4,6 +4,7 @@ import Header from "../components/Header";
 import QueueSidebar from "../components/QueueSidebar";
 import { io } from "socket.io-client";
 import { printReceipt } from "../utils/receiptPrinter";
+import { printArchivePdf } from "../utils/archivePdfPrinter";
 import { API_BASE_URL, API_URL_WITHOUT_ROUTE } from "../services/api";
 
 const API_URL = API_BASE_URL;
@@ -93,6 +94,7 @@ const AccountingPage = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [isPrintingPdf, setIsPrintingPdf] = useState(false);
 
   // مرجع للتمرير إلى أعلى المحتوى
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -654,6 +656,19 @@ const AccountingPage = () => {
     }
   };
 
+  // طباعة أرشيف المحاسبة كـ PDF
+  const handlePrintArchivePdf = async () => {
+    try {
+      setIsPrintingPdf(true);
+      await printArchivePdf(archiveData);
+    } catch (error) {
+      console.error("❌ خطأ في طباعة الأرشيف:", error);
+      alert("❌ حدث خطأ في طباعة الأرشيف");
+    } finally {
+      setIsPrintingPdf(false);
+    }
+  };
+
   return (
     <div
       className='h-screen flex flex-col'
@@ -1065,11 +1080,19 @@ const AccountingPage = () => {
                 style={{ color: "var(--primary)" }}>
                 📁 أرشيف المحاسبة
               </h2>
-              <button
-                onClick={() => setShowArchive(false)}
-                className='text-gray-500 hover:text-gray-700 text-3xl'>
-                ×
-              </button>
+              <div className='flex items-center gap-4'>
+                <button
+                  onClick={handlePrintArchivePdf}
+                  disabled={isPrintingPdf || archiveData.length === 0}
+                  className='bg-[#054239] text-white hover:bg-[#054239]/80 cursor-pointer rounded-lg px-6 py-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'>
+                  {isPrintingPdf ? "⏳ جاري الإعداد..." : "📄 طباعة اليومية"}
+                </button>
+                <button
+                  onClick={() => setShowArchive(false)}
+                  className='text-gray-500 hover:text-gray-700 text-3xl'>
+                  ×
+                </button>
+              </div>
             </div>
 
             {/* Search Bar */}
