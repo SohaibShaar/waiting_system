@@ -1,7 +1,7 @@
 import qz from "qz-tray";
 import JsBarcode from "jsbarcode";
 
-function createInvoiceCanvas(name, barcodeValue) {
+function createInvoiceCanvas(name, barcodeValue, priority) {
   const scale = 4; // يكفي
   const widthPx = 500; // مقاس اللصاقة الحقيقي بالبيكسل
   const heightPx = 300;
@@ -16,30 +16,71 @@ function createInvoiceCanvas(name, barcodeValue) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, widthPx, heightPx);
 
-  ctx.fillStyle = "#000000";
-  ctx.font = `36px Arial`; // كبر الخط حسب التكبير
-  ctx.textAlign = "center";
+  if (priority === 1) {
+    ctx.fillStyle = "#000000";
+    ctx.font = `bold 36px Arial`; // كبر الخط حسب التكبير
+    ctx.textAlign = "center";
+    ctx.fillText("*** مُستعجل ***", widthPx / 2, 80);
+    ctx.fillStyle = "#000000";
+    ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+    ctx.textAlign = "center";
+    ctx.fillText(name, widthPx / 2, 125);
 
-  ctx.fillText(name, widthPx / 2, 100);
+    // ✅ توليد الباركود
+    const barcodeCanvas = document.createElement("canvas");
+    JsBarcode(barcodeCanvas, barcodeValue, {
+      format: "CODE128",
+      width: 7, // سماكة الخطوط
+      height: 50, // ارتفاع الباركود
+      displayValue: true, // إظهار الرقم أسفل الباركود
+      fontSize: (28 * scale) / 2,
+      margin: 0,
+      textAlign: "center",
+    });
 
-  // ✅ توليد الباركود
-  const barcodeCanvas = document.createElement("canvas");
-  JsBarcode(barcodeCanvas, barcodeValue, {
-    format: "CODE128",
-    width: 7, // سماكة الخطوط
-    height: 50, // ارتفاع الباركود
-    displayValue: true, // إظهار الرقم أسفل الباركود
-    fontSize: (28 * scale) / 2,
-    margin: 0,
-    textAlign: "center",
-  });
+    const barcodeWidth = barcodeCanvas.width / 2;
+    const barcodeHeight = barcodeCanvas.height;
+    const barcodeX = (widthPx - barcodeWidth) / 2;
+    const barcodeY = 170; // موقعه بالأسفل
 
-  const barcodeWidth = barcodeCanvas.width / 2;
-  const barcodeHeight = barcodeCanvas.height;
-  const barcodeX = (widthPx - barcodeWidth) / 2;
-  const barcodeY = 150; // موقعه بالأسفل
+    ctx.drawImage(
+      barcodeCanvas,
+      barcodeX,
+      barcodeY,
+      barcodeWidth,
+      barcodeHeight
+    );
+  } else {
+    ctx.fillStyle = "#000000";
+    ctx.font = `36px Arial`; // كبر الخط حسب التكبير
+    ctx.textAlign = "center";
+    ctx.fillText(name, widthPx / 2, 100);
 
-  ctx.drawImage(barcodeCanvas, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
+    // ✅ توليد الباركود
+    const barcodeCanvas = document.createElement("canvas");
+    JsBarcode(barcodeCanvas, barcodeValue, {
+      format: "CODE128",
+      width: 7, // سماكة الخطوط
+      height: 50, // ارتفاع الباركود
+      displayValue: true, // إظهار الرقم أسفل الباركود
+      fontSize: (28 * scale) / 2,
+      margin: 0,
+      textAlign: "center",
+    });
+
+    const barcodeWidth = barcodeCanvas.width / 2;
+    const barcodeHeight = barcodeCanvas.height;
+    const barcodeX = (widthPx - barcodeWidth) / 2;
+    const barcodeY = 150; // موقعه بالأسفل
+
+    ctx.drawImage(
+      barcodeCanvas,
+      barcodeX,
+      barcodeY,
+      barcodeWidth,
+      barcodeHeight
+    );
+  }
 
   return canvas;
 }
@@ -229,8 +270,8 @@ export async function printLabels(
           maleStatus,
           femaleStatus
         ),
-        createInvoiceCanvas(nameMale, barcodeValueMale),
-        createInvoiceCanvas(nameMale, barcodeValueMale2),
+        createInvoiceCanvas(nameMale, barcodeValueMale, priority),
+        createInvoiceCanvas(nameMale, barcodeValueMale2, priority),
       ];
 
       // 👇 أمر طباعة واحد يحتوي جميع الصور
@@ -257,8 +298,8 @@ export async function printLabels(
           maleStatus,
           femaleStatus
         ),
-        createInvoiceCanvas(nameFemale, barcodeValueFemale),
-        createInvoiceCanvas(nameFemale, barcodeValueFemale2),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale, priority),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale2, priority),
       ];
 
       // 👇 أمر طباعة واحد يحتوي جميع الصور
@@ -282,10 +323,10 @@ export async function printLabels(
           maleStatus,
           femaleStatus
         ),
-        createInvoiceCanvas(nameMale, barcodeValueMale),
-        createInvoiceCanvas(nameMale, barcodeValueMale2),
-        createInvoiceCanvas(nameFemale, barcodeValueFemale),
-        createInvoiceCanvas(nameFemale, barcodeValueFemale2),
+        createInvoiceCanvas(nameMale, barcodeValueMale, priority),
+        createInvoiceCanvas(nameMale, barcodeValueMale2, priority),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale, priority),
+        createInvoiceCanvas(nameFemale, barcodeValueFemale2, priority),
       ];
       // 👇 أمر طباعة واحد يحتوي جميع الصور
       const data = labels.map((canvas) => ({

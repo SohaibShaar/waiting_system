@@ -611,7 +611,7 @@ function createReceiptCanvas(
 
       // تحديد الرسالة المناسبة للزوجة حسب نتائج الفحوصات وفصيلة الدم
       let femaleNoteText = femaleNotes;
-      if (!femaleNoteText) {
+      if (!femaleNoteText || femaleNoteText === "") {
         // فحص إذا كان أي من فحوصات الزوجة إيجابي
         const hasFemalePositiveTest =
           femaleHIVstatus === "POSITIVE" ||
@@ -624,7 +624,23 @@ function createReceiptCanvas(
           maleHemoglobinEnabled ||
           femaleHemoglobinEnabled
         ) {
-          femaleNoteText = ""; // لا تظهر رسالة إيجابية إذا كان هناك فحص إيجابي أو خضاب شاذة مفعل
+          // فحص إذا كانت فصيلة الخطيبة سالبة وفصيلة الخطيب موجبة
+          const isFemaleNegative =
+            femaleBloodType && femaleBloodType.includes("-");
+          const isMalePositive = maleBloodType && maleBloodType.includes("+");
+
+          if (isFemaleNegative && isMalePositive) {
+            ctx.fillStyle = "#000000";
+            ctx.font = "18px Cairo";
+            ctx.textAlign = "right";
+            femaleNoteText = `زمرة الخطيبة سلبي , يرجى الانتباه عند الولادة والإسقاط`;
+            ctx.strokeStyle = "black";
+            ctx.fillStyle = "#EEEEEE";
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(137, 955, 560, 23); // x, y, width, height
+          } else {
+            femaleNoteText = ``;
+          } // لا تظهر رسالة إيجابية إذا كان هناك فحص إيجابي أو خضاب شاذة مفعل
         } else {
           // فحص إذا كانت فصيلة الخطيبة سالبة وفصيلة الخطيب موجبة
           const isFemaleNegative =
@@ -632,21 +648,24 @@ function createReceiptCanvas(
           const isMalePositive = maleBloodType && maleBloodType.includes("+");
 
           if (isFemaleNegative && isMalePositive) {
-            femaleNoteText = `زمرة الخطيبة سلبي , يرجى الانتباه عند الولادة والإسقاط`;
             ctx.strokeStyle = "black";
             ctx.fillStyle = "#EEEEEE";
             ctx.lineWidth = 1.5;
-            ctx.fillRect(137, 919, 560, 23); // x, y, width, height
+            ctx.fillRect(137, 955, 560, 23); // x, y, width, height
+            ctx.fillStyle = "#000000";
+            ctx.font = "18px Cairo";
+            ctx.textAlign = "right";
+            femaleNoteText = `زمرة الخطيبة سلبي , يرجى الانتباه عند الولادة والإسقاط`;
+            ctx.fillText(femaleNoteText, widthPx - 100, 971);
           } else {
+            ctx.fillStyle = "#000000";
+            ctx.font = "18px Cairo";
+            ctx.textAlign = "right";
             femaleNoteText = `جميع الفحوصات والتحاليل المجراة في المخبر لدينا سليمة, لا مانع من زواجها`;
+            ctx.fillText(femaleNoteText, widthPx - 100, 936);
           }
         }
       }
-
-      ctx.fillStyle = "#000000";
-      ctx.font = "18px Cairo";
-      ctx.textAlign = "right";
-      ctx.fillText(femaleNoteText, widthPx - 100, 935);
     } // نهاية شرط عرض مربع بيانات الخطيبة
     else {
       // مستطيل الخطيبة

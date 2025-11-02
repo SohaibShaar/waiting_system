@@ -1227,7 +1227,31 @@ const ReceptionPage = () => {
                 <span className='bg-white cursor-default text-[#988561] w-5 h-5 rounded-full text-lg font-bold inline-flex items-center justify-center'>
                   !
                 </span>
-                <span>المراجعون المضافون اليوم ( {todayPatients.length} )</span>
+                <span className='text-sm font-bold text-white'>
+                  المراجعون ( {todayPatients.length} )
+                </span>
+                {todayPatients.filter((p) => p.queue.priority === 1).length >
+                14 ? (
+                  <div>
+                    <span className='text-sm font-bold text-white bg-red-600 animate-pulse px-1 rounded-xl'>
+                      عدد المُستعجل :{" "}
+                      {
+                        todayPatients.filter((p) => p.queue.priority === 1)
+                          .length
+                      }
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <span className='text-sm font-bold text-white'>
+                      عدد المُستعجل :{" "}
+                      {
+                        todayPatients.filter((p) => p.queue.priority === 1)
+                          .length
+                      }
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

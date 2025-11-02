@@ -265,12 +265,21 @@ const QueueSidebar = ({
 
       {/* Footer */}
       <div
-        className='p-3 text-center text-sm border-t'
+        className='p-3 text-center text-sm border-t flex flex-row gap-10'
         style={{
           backgroundColor: "#054239",
           color: "#ffffff",
         }}>
-        إجمالي الأدوار: <span className='font-bold'>{queues.length}</span>
+        <div className='mb-1'>
+          إجمالي الأدوار:{" "}
+          <span className='text-sm font-bold'>{queues.length}</span>
+        </div>
+        <div>
+          عدد المستعجل:{" "}
+          <span className='font-bold text-orange-400'>
+            {queues.filter((q) => q.priority === 1).length}
+          </span>
+        </div>
       </div>
     </div>
   );
