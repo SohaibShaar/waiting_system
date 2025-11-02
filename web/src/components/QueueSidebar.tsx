@@ -72,9 +72,9 @@ const QueueSidebar = ({
               q.currentStation.name === "المحاسبة" ||
               q.currentStation.displayNumber === 2
             );
-          } else if (stationName === "المختبر") {
+          } else if (stationName === "غرفة الفحص الطبي") {
             return (
-              q.currentStation.name === "المختبر" ||
+              q.currentStation.name === "غرفة الفحص الطبي" ||
               q.currentStation.name === "الفحص الطبي" ||
               q.currentStation.displayNumber === 3
             );

@@ -42,6 +42,45 @@ async function resetQueueNumbers(): Promise<void> {
   console.log("🔄 تم إعادة تعيين أرقام الأدوار");
 }
 
+/**
+ * الحصول على رقم دور متاح (إعادة استخدام أرقام الأدوار الملغاة)
+ * يبحث عن أقل رقم دور ملغى في نفس اليوم، وإذا لم يجد يعطي رقم جديد
+ */
+async function getNextAvailableQueueNumber(): Promise<number> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // البحث عن أقل رقم دور ملغى في نفس اليوم
+  const cancelledQueue = await prisma.queue.findFirst({
+    where: {
+      status: OverallQueueStatus.CANCELLED,
+      createdAt: {
+        gte: today,
+        lt: tomorrow,
+      },
+    },
+    orderBy: {
+      queueNumber: "asc", // الأقل أولاً
+    },
+    select: {
+      queueNumber: true,
+    },
+  });
+
+  if (cancelledQueue) {
+    console.log(
+      `♻️ إعادة استخدام رقم الدور الملغى #${cancelledQueue.queueNumber}`
+    );
+    return cancelledQueue.queueNumber;
+  }
+
+  // إذا لم يوجد أرقام ملغاة، احصل على الرقم التالي
+  const lastNumber = await getLastQueueNumber();
+  return lastNumber + 1;
+}
+
 // ============================================
 // 4️⃣ إدارة الأدوار - الإنشاء
 // ============================================
@@ -157,7 +196,7 @@ async function getCancelledQueuesForToday() {
 }
 
 /**
- * إعادة تفعيل دور ملغى بإنشاء دور جديد
+ * إعادة تفعيل دور ملغى بإعادة استخدام نفس رقم الدور
  * يتم حذف الدور القديم من قاعدة البيانات بعد إنشاء الدور الجديد
  */
 async function reinstateQueue(queueId: number) {
@@ -183,24 +222,23 @@ async function reinstateQueue(queueId: number) {
     throw new Error("❌ لا توجد بيانات استقبال لهذا الدور");
   }
 
-  // 2. الحصول على رقم دور جديد
-  const lastNumber = await getLastQueueNumber();
-  const newQueueNumber = lastNumber + 1;
+  // 2. إعادة استخدام نفس رقم الدور القديم
+  const reusedQueueNumber = cancelledQueue.queueNumber;
 
   // 3. المحطة التي سيبدأ منها الدور الجديد
   const targetStation = cancelledQueue.currentStation;
 
-  // 4. إنشاء Queue جديد
+  // 4. إنشاء Queue جديد بنفس رقم الدور
   const newQueue = await prisma.queue.create({
     data: {
-      queueNumber: newQueueNumber,
+      queueNumber: reusedQueueNumber, // ♻️ إعادة استخدام نفس الرقم
       patientId: cancelledQueue.patientId,
       currentStationId: targetStation.id,
       status: OverallQueueStatus.ACTIVE,
       priority: cancelledQueue.priority,
       notes: cancelledQueue.notes
-        ? `${cancelledQueue.notes} (مُعاد من #${cancelledQueue.queueNumber})`
-        : `مُعاد من الدور #${cancelledQueue.queueNumber}`,
+        ? `${cancelledQueue.notes} | مُعاد تفعيله`
+        : `مُعاد تفعيله`,
     },
     include: {
       patient: true,
@@ -219,6 +257,7 @@ async function reinstateQueue(queueId: number) {
       maleName: oldReceptionData.maleName,
       maleLastName: oldReceptionData.maleLastName,
       maleFatherName: oldReceptionData.maleFatherName,
+      maleMotherName: oldReceptionData.maleMotherName,
       maleBirthDate: oldReceptionData.maleBirthDate,
       maleNationalId: oldReceptionData.maleNationalId,
       maleAge: oldReceptionData.maleAge,
@@ -228,6 +267,7 @@ async function reinstateQueue(queueId: number) {
       femaleName: oldReceptionData.femaleName,
       femaleLastName: oldReceptionData.femaleLastName,
       femaleFatherName: oldReceptionData.femaleFatherName,
+      femaleMotherName: oldReceptionData.femaleMotherName,
       femaleBirthDate: oldReceptionData.femaleBirthDate,
       femaleNationalId: oldReceptionData.femaleNationalId,
       femaleAge: oldReceptionData.femaleAge,
@@ -245,11 +285,11 @@ async function reinstateQueue(queueId: number) {
       queueId: newQueue.id,
       stationId: targetStation.id,
       status: QueueStatus.WAITING,
+      notes: "تم إعادة التفعيل",
     },
   });
 
-  // 7. تحديث آخر رقم دور
-  await updateLastQueueNumber(newQueueNumber);
+  // 7. لا حاجة لتحديث LAST_QUEUE_NUMBER لأننا نعيد استخدام رقم قديم
 
   // 8. حذف الدور القديم الملغى من قاعدة البيانات
   // يجب حذف البيانات المرتبطة أولاً بسبب القيود الخارجية (foreign keys)
@@ -270,15 +310,15 @@ async function reinstateQueue(queueId: number) {
   });
 
   console.log(
-    `✅ تم إعادة تفعيل الدور #${cancelledQueue.queueNumber} بالرقم الجديد #${newQueueNumber}`
+    `✅ تم إعادة تفعيل الدور #${reusedQueueNumber} (إعادة استخدام نفس الرقم)`
   );
   console.log(
-    `🗑️ تم حذف الدور القديم #${cancelledQueue.queueNumber} من قاعدة البيانات`
+    `🗑️ تم حذف الدور القديم من قاعدة البيانات وإنشاء دور جديد بنفس الرقم`
   );
 
   return {
     newQueue,
-    queueNumber: newQueueNumber,
+    queueNumber: reusedQueueNumber,
     station: targetStation,
   };
 }
@@ -527,6 +567,7 @@ export {
   getLastQueueNumber,
   updateLastQueueNumber,
   resetQueueNumbers,
+  getNextAvailableQueueNumber,
   createNewQueue,
   getCancelledQueuesForToday,
   reinstateQueue,
