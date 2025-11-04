@@ -84,9 +84,15 @@ async function main() {
         description: "سحب الدم",
       },
       {
+        name: "تحديد فصيلة الدم",
+        displayNumber: 6,
+        order: 5,
+        description: "تحديد فصيلة دم الزوج والزوجة",
+      },
+      {
         name: "الدكتور",
         displayNumber: 5,
-        order: 5,
+        order: 6,
         description: "الكشف الطبي",
       },
     ],

@@ -4,6 +4,7 @@ import ReceptionPage from "./pages/ReceptionPage";
 import AccountingPage from "./pages/AccountingPage";
 import LabPage from "./pages/CheckDoctorPage";
 import BloodDrawPage from "./pages/BloodDrawPage";
+import BloodTypeScreenPage from "./pages/BloodTypeScreenPage";
 import DoctorPage from "./pages/DoctorPage";
 import PatientDetailsPage from "./pages/PatientDetailsPage";
 import PasswordProtectedRoute from "./components/PasswordProtectedRoute";
@@ -44,6 +45,14 @@ function App() {
           element={
             <PasswordProtectedRoute pageName='blood-draw'>
               <BloodDrawPage />
+            </PasswordProtectedRoute>
+          }
+        />
+        <Route
+          path='/blood-type-screen'
+          element={
+            <PasswordProtectedRoute pageName='blood-type-screen'>
+              <BloodTypeScreenPage />
             </PasswordProtectedRoute>
           }
         />
@@ -194,6 +203,26 @@ function HomePage() {
                 سحب الدم
               </h2>
               <p style={{ color: "var(--dark)" }}>سحب عينات الدم</p>
+            </div>
+          </Link>
+
+          {/* Blood Type Screen */}
+          <Link
+            to='/blood-type-screen'
+            className='transform hover:scale-105 transition'>
+            <div
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>🩸</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                تحديد فصيلة الدم
+              </h2>
+              <p style={{ color: "var(--dark)" }}>تحديد الزمرة الدموية</p>
             </div>
           </Link>
 

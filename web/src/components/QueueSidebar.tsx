@@ -36,7 +36,8 @@ interface QueueItem {
 }
 
 interface QueueSidebarProps {
-  stationName: string;
+  stationName?: string;
+  stationDisplayNumber?: number;
   currentQueueId?: number;
   stationId?: number | null;
   onSelectQueue?: (queue: QueueItem) => void; // callback عند اختيار دور
@@ -44,6 +45,7 @@ interface QueueSidebarProps {
 
 const QueueSidebar = ({
   stationName,
+  stationDisplayNumber,
   currentQueueId,
 
   onSelectQueue,
@@ -56,7 +58,7 @@ const QueueSidebar = ({
 
   const fetchQueues = async () => {
     try {
-      console.log(`🔍 جاري جلب الأدوار لـ ${stationName}...`);
+      console.log(`🔍 جاري جلب الأدوار لـ ${stationName || `محطة ${stationDisplayNumber}`}...`);
       const response = await axios.get(`${API_URL}/queue/active`);
 
       if (response.data.success) {
@@ -66,7 +68,12 @@ const QueueSidebar = ({
         const filteredQueues = response.data.queues.filter((q: QueueItem) => {
           if (!q.currentStation) return false;
 
-          // Show only queues that are currently at this station
+          // إذا تم تمرير stationDisplayNumber، استخدمه مباشرة
+          if (stationDisplayNumber !== undefined) {
+            return q.currentStation.displayNumber === stationDisplayNumber;
+          }
+
+          // Show only queues that are currently at this station (based on name)
           if (stationName === "المحاسبة") {
             return (
               q.currentStation.name === "المحاسبة" ||
@@ -83,6 +90,11 @@ const QueueSidebar = ({
               q.currentStation.name === "سحب الدم" ||
               q.currentStation.displayNumber === 4
             );
+          } else if (stationName === "تحديد فصيلة الدم") {
+            return (
+              q.currentStation.name === "تحديد فصيلة الدم" ||
+              q.currentStation.displayNumber === 6
+            );
           } else if (stationName === "الطبيبة") {
             return (
               q.currentStation.name === "الطبيبة" ||
@@ -95,7 +107,7 @@ const QueueSidebar = ({
         });
 
         console.log(
-          `📋 تم العثور على ${filteredQueues.length} دور ينتظر في ${stationName}`
+          `📋 تم العثور على ${filteredQueues.length} دور ينتظر في ${stationName || `محطة ${stationDisplayNumber}`}`
         );
 
         // Sort by queue number
@@ -115,7 +127,7 @@ const QueueSidebar = ({
   useEffect(() => {
     fetchQueues();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stationName, updateTrigger]); // Refetch when WebSocket triggers update
+  }, [stationName, stationDisplayNumber, updateTrigger]); // Refetch when WebSocket triggers update
 
   // عند النقر على بطاقة المراجع
   const handleQueueClick = (queue: QueueItem) => {

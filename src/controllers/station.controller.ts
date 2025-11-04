@@ -338,7 +338,15 @@ export async function callNext(req: Request, res: Response) {
 export async function callSpecific(req: Request, res: Response) {
   try {
     const stationId = parseInt(req.params.stationId as string);
-    const { queueNumber, calledBy } = req.body;
+    const { queueNumber, calledBy, silent } = req.body;
+
+    console.log("🔍 callSpecific - البيانات المستلمة:", {
+      stationId,
+      queueNumber,
+      calledBy,
+      silent,
+      body: req.body,
+    });
 
     if (isNaN(stationId)) {
       return res.status(400).json({
@@ -369,10 +377,11 @@ export async function callSpecific(req: Request, res: Response) {
       queueNumber: result.queueNumber,
       displayNumber: result.displayNumber,
       hasQueue: !!result.queue,
+      silent: !!silent,
     });
 
-    // إرسال حدث Socket.IO
-    if (result.displayNumber && result.queueNumber) {
+    // إرسال حدث Socket.IO فقط إذا لم يكن استدعاء صامت
+    if (!silent && result.displayNumber && result.queueNumber) {
       console.log("📡 إرسال emitPatientCalled...");
       emitPatientCalled({
         queueNumber: result.queueNumber,
@@ -384,6 +393,8 @@ export async function callSpecific(req: Request, res: Response) {
       // تحديث بيانات الشاشة
       emitScreenDataUpdate();
       console.log("✅ تم إرسال الإشعارات");
+    } else if (silent) {
+      console.log("🔇 استدعاء صامت - لن يتم العرض على الشاشة");
     } else {
       console.error("❌ displayNumber أو queueNumber مفقود!");
     }
@@ -393,7 +404,9 @@ export async function callSpecific(req: Request, res: Response) {
       queue: result.queue,
       displayNumber: result.displayNumber,
       queueNumber: result.queueNumber,
-      message: `تم استدعاء الدور #${queueNumber}`,
+      message: silent
+        ? `تم استدعاء الدور #${queueNumber} (بدون عرض)`
+        : `تم استدعاء الدور #${queueNumber}`,
     });
   } catch (error: any) {
     res.status(500).json({

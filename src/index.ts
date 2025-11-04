@@ -13,6 +13,7 @@ import screenRouter from "./routes/screen.routes";
 import receptionRoutes from "./routes/reception.routes";
 import labRoutes from "./routes/lab.routes";
 import bloodDrawRoutes from "./routes/bloodDraw.routes";
+import bloodTypeRoutes from "./routes/bloodType.routes";
 import doctorRoutes from "./routes/doctor.routes";
 import accountingRoutes from "./routes/accounting.routes";
 import authRoutes from "./routes/auth.routes";
@@ -49,6 +50,7 @@ app.use("/api/display", screenRouter);
 app.use("/api/reception", receptionRoutes);
 app.use("/api/lab", labRoutes);
 app.use("/api/blood-draw", bloodDrawRoutes);
+app.use("/api/blood-type", bloodTypeRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/accounting", accountingRoutes);
 app.use("/api/favPrices", favPricesRoutes);
@@ -69,6 +71,7 @@ app.get("/", (req, res) => {
       reception: "/api/reception",
       lab: "/api/lab",
       bloodDraw: "/api/blood-draw",
+      bloodType: "/api/blood-type",
       doctor: "/api/doctor",
       accounting: "/api/accounting",
     },

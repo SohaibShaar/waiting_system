@@ -56,8 +56,6 @@ const DoctorPage = () => {
     null
   );
   const [formData, setFormData] = useState({
-    maleBloodType: "",
-    femaleBloodType: "",
     maleHIVstatus: "NEGATIVE",
     femaleHIVstatus: "NEGATIVE",
     maleHBSstatus: "NEGATIVE",
@@ -91,6 +89,12 @@ const DoctorPage = () => {
     maleNotes: "",
     femaleNotes: "",
     notes: "",
+  });
+
+  // فصيلة الدم (للقراءة فقط - من محطة تحديد فصيلة الدم)
+  const [bloodTypeData, setBloodTypeData] = useState({
+    maleBloodType: "",
+    femaleBloodType: "",
   });
   const [loading, setLoading] = useState(false);
   const [stationId, setStationId] = useState<number | null>(null);
@@ -252,14 +256,14 @@ const DoctorPage = () => {
       return;
     }
 
-    // التحقق من إدخال فصيلة الدم
-    if (shouldShowMaleSection() && !formData.maleBloodType) {
-      alert("⚠️ يرجى إدخال فصيلة دم الزوج");
+    // التحقق من وجود فصيلة الدم (تم إدخالها في محطة تحديد فصيلة الدم)
+    if (shouldShowMaleSection() && !bloodTypeData.maleBloodType) {
+      alert("⚠️ لم يتم تحديد فصيلة دم الزوج في محطة تحديد فصيلة الدم");
       return;
     }
 
-    if (shouldShowFemaleSection() && !formData.femaleBloodType) {
-      alert("⚠️ يرجى إدخال فصيلة دم الزوجة");
+    if (shouldShowFemaleSection() && !bloodTypeData.femaleBloodType) {
+      alert("⚠️ لم يتم تحديد فصيلة دم الزوجة في محطة تحديد فصيلة الدم");
       return;
     }
 
@@ -301,8 +305,6 @@ const DoctorPage = () => {
         // مسح البيانات الحالية
         setCurrentPatient(null);
         setFormData({
-          maleBloodType: "",
-          femaleBloodType: "",
           maleHIVstatus: "NEGATIVE",
           femaleHIVstatus: "NEGATIVE",
           maleHBSstatus: "NEGATIVE",
@@ -336,6 +338,10 @@ const DoctorPage = () => {
           maleNotes: "",
           femaleNotes: "",
           notes: "",
+        });
+        setBloodTypeData({
+          maleBloodType: "",
+          femaleBloodType: "",
         });
       }
     } catch (error) {
@@ -396,8 +402,6 @@ const DoctorPage = () => {
 
         // تصفير الفورم عند اختيار شخص جديد
         setFormData({
-          maleBloodType: "",
-          femaleBloodType: "",
           maleHIVstatus: "NEGATIVE",
           femaleHIVstatus: "NEGATIVE",
           maleHBSstatus: "NEGATIVE",
@@ -432,6 +436,26 @@ const DoctorPage = () => {
           femaleNotes: "",
           notes: "",
         });
+
+        // جلب فصيلة الدم من محطة تحديد فصيلة الدم
+        try {
+          const bloodTypeResponse = await axios.get(
+            `${API_URL}/blood-type/${fullQueue.id}`
+          );
+          if (bloodTypeResponse.data.success) {
+            setBloodTypeData({
+              maleBloodType: bloodTypeResponse.data.data.maleBloodType || "",
+              femaleBloodType:
+                bloodTypeResponse.data.data.femaleBloodType || "",
+            });
+          }
+        } catch (error) {
+          console.error("خطأ في جلب فصيلة الدم:", error);
+          setBloodTypeData({
+            maleBloodType: "",
+            femaleBloodType: "",
+          });
+        }
 
         console.log(`✅ تم اختيار الدور #${fullQueue.queueNumber}`);
       }
@@ -748,14 +772,14 @@ const DoctorPage = () => {
       return;
     }
 
-    // التحقق من إدخال فصيلة الدم قبل الطباعة
-    if (shouldShowMaleSection() && !formData.maleBloodType) {
-      alert("⚠️ يرجى إدخال فصيلة دم الزوج قبل الطباعة");
+    // التحقق من وجود فصيلة الدم قبل الطباعة
+    if (shouldShowMaleSection() && !bloodTypeData.maleBloodType) {
+      alert("⚠️ لم يتم تحديد فصيلة دم الزوج في محطة تحديد فصيلة الدم");
       return;
     }
 
-    if (shouldShowFemaleSection() && !formData.femaleBloodType) {
-      alert("⚠️ يرجى إدخال فصيلة دم الزوجة قبل الطباعة");
+    if (shouldShowFemaleSection() && !bloodTypeData.femaleBloodType) {
+      alert("⚠️ لم يتم تحديد فصيلة دم الزوجة في محطة تحديد فصيلة الدم");
       return;
     }
 
@@ -771,7 +795,7 @@ const DoctorPage = () => {
           currentPatient.ReceptionData.maleBirthDate || ""
         ),
         maleBirthPlace: currentPatient.ReceptionData.maleBirthPlace || "",
-        maleBloodType: formData.maleBloodType,
+        maleBloodType: bloodTypeData.maleBloodType,
         HIVstatus: formData.maleHIVstatus,
         HBSstatus: formData.maleHBSstatus,
         HBCstatus: formData.maleHBCstatus,
@@ -801,7 +825,7 @@ const DoctorPage = () => {
           currentPatient.ReceptionData.femaleBirthDate || ""
         ),
         femaleBirthPlace: currentPatient.ReceptionData.femaleBirthPlace || "",
-        femaleBloodType: formData.femaleBloodType,
+        femaleBloodType: bloodTypeData.femaleBloodType,
         femaleHIVstatus: formData.femaleHIVstatus,
         femaleHBSstatus: formData.femaleHBSstatus,
         femaleHBCstatus: formData.femaleHBCstatus,
@@ -1637,34 +1661,17 @@ const DoctorPage = () => {
                       👨 بيانات الزوج
                     </h3>
                     <div className='relative'>
-                      <select
-                        value={formData.maleBloodType}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            maleBloodType: e.target.value,
-                          })
-                        }
-                        required
-                        className='input-field text-sm py-2'
-                        style={{
-                          borderColor: !formData.maleBloodType
-                            ? "#ef4444"
-                            : undefined,
-                          borderWidth: !formData.maleBloodType
-                            ? "2px"
-                            : undefined,
-                        }}>
-                        <option value=''>فصيلة الدم *</option>
-                        {bloodTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                      {!formData.maleBloodType && (
+                      <div className='p-3 bg-blue-50 rounded-lg border-2 border-blue-300'>
+                        <p className='text-xs text-gray-600 mb-1'>
+                          فصيلة الدم (من محطة تحديد فصيلة الدم)
+                        </p>
+                        <p className='text-xl font-bold text-blue-800'>
+                          {bloodTypeData.maleBloodType || "لم يتم تحديدها بعد"}
+                        </p>
+                      </div>
+                      {!bloodTypeData.maleBloodType && (
                         <span className='text-xs text-red-500 mt-1 block'>
-                          هذا الحقل إجباري
+                          ⚠️ يجب تحديد فصيلة الدم في محطة تحديد فصيلة الدم أولاً
                         </span>
                       )}
                     </div>
@@ -1809,34 +1816,18 @@ const DoctorPage = () => {
                       👩 بيانات الزوجة
                     </h3>
                     <div className='relative'>
-                      <select
-                        value={formData.femaleBloodType}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            femaleBloodType: e.target.value,
-                          })
-                        }
-                        required
-                        className='input-field text-sm py-2'
-                        style={{
-                          borderColor: !formData.femaleBloodType
-                            ? "#ef4444"
-                            : undefined,
-                          borderWidth: !formData.femaleBloodType
-                            ? "2px"
-                            : undefined,
-                        }}>
-                        <option value=''>فصيلة الدم *</option>
-                        {bloodTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                      {!formData.femaleBloodType && (
+                      <div className='p-3 bg-pink-50 rounded-lg border-2 border-pink-300'>
+                        <p className='text-xs text-gray-600 mb-1'>
+                          فصيلة الدم (من محطة تحديد فصيلة الدم)
+                        </p>
+                        <p className='text-xl font-bold text-pink-800'>
+                          {bloodTypeData.femaleBloodType ||
+                            "لم يتم تحديدها بعد"}
+                        </p>
+                      </div>
+                      {!bloodTypeData.femaleBloodType && (
                         <span className='text-xs text-red-500 mt-1 block'>
-                          هذا الحقل إجباري
+                          ⚠️ يجب تحديد فصيلة الدم في محطة تحديد فصيلة الدم أولاً
                         </span>
                       )}
                     </div>
