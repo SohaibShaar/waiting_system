@@ -272,7 +272,7 @@ async function getAllCompletedPatientData(filters?: {
   ids?: number[];
 }) {
   const page = filters?.page || 1;
-  const limit = filters?.limit || 21;
+  const limit = filters?.limit || 150;
   const skip = (page - 1) * limit;
 
   // Build where clause

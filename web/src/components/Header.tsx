@@ -5,6 +5,7 @@ interface HeaderProps {
   icon?: string;
   showBackButton?: boolean;
   showHomeButton?: boolean;
+  showHomeButtonForDoctor?: boolean;
 }
 
 const Header = ({ title, icon, showHomeButton = false }: HeaderProps) => {
@@ -49,6 +50,14 @@ const Header = ({ title, icon, showHomeButton = false }: HeaderProps) => {
               </button>
             </div>
           )}
+
+          <div className='flex items-center gap-3'>
+            <button
+              onClick={() => navigate("/")}
+              className='px-4 cursor-pointer bg-white py-2 rounded-lg font-semibold transition duration-250 hover:shadow-lg hover:bg-[#988561] hover:text-white disabled:opacity-70 disabled:cursor-not-allowed'>
+              الصفحة الرئيسية
+            </button>
+          </div>
         </div>
       </div>
     </header>

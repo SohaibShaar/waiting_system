@@ -103,6 +103,7 @@ const DoctorPage = () => {
     Array<{
       id: number;
       queueId: number;
+      queueNumber?: number;
       completedAt: string;
       priority?: number;
       patient?: { id: number; name: string };
@@ -466,8 +467,6 @@ const DoctorPage = () => {
     }
   };
 
-  const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-
   // تحميل قائمة البيانات المكتملة
   const loadCompletedData = useCallback(
     async (page = 1, search = "", priority = priorityFilter) => {
@@ -651,7 +650,9 @@ const DoctorPage = () => {
           : true;
 
         if (!hasMaleBloodType || !hasFemaleBloodType) {
-          throw new Error(`فصيلة الدم غير مكتملة للسجل #${item.queueId}`);
+          throw new Error(
+            `فصيلة الدم غير مكتملة للسجل #${item.queueNumber || item.queueId}`
+          );
         }
 
         return {
@@ -715,7 +716,7 @@ const DoctorPage = () => {
           }),
           maleStatus: item.ReceptionData?.maleStatus || "",
           femaleStatus: item.ReceptionData?.femaleStatus || "",
-          idnumber: item.queueId || "",
+          idnumber: item.queueNumber || item.queueId || "",
           priority: item.priority || "",
         };
       });
@@ -855,7 +856,7 @@ const DoctorPage = () => {
     <div
       className='h-screen flex flex-col'
       style={{ backgroundColor: "var(--light)" }}>
-      <Header title='محطة الطبيبة - الفحص النهائي' icon='👩‍⚕️' />
+      <Header title='محطة الطبيبة - الفحص النهائي' icon='👩‍⚕️' showHomeButtonForDoctor={true} />
 
       <div className='flex-1 flex overflow-hidden'>
         {/* Main Area */}
@@ -1137,7 +1138,9 @@ const DoctorPage = () => {
                                 className='w-5 h-5 cursor-pointer'
                               />
                             </td>
-                            <td className='p-3'>#{item.queueId}</td>
+                            <td className='p-3'>
+                              #{item.queueNumber || item.queueId}
+                            </td>
                             <td className='p-3'>
                               {item.patient?.id.toString() || "غير متوفر"}
                             </td>
@@ -1361,7 +1364,8 @@ const DoctorPage = () => {
                                         item.ReceptionData?.maleStatus || "",
                                       femaleStatus:
                                         item.ReceptionData?.femaleStatus || "",
-                                      idnumber: item.queueId || "",
+                                      idnumber:
+                                        item.queueNumber || item.queueId || "",
                                       priority: item.priority || "",
                                     };
 
@@ -2306,10 +2310,13 @@ const DoctorPage = () => {
                   </button>
 
                   <button
+                    hidden
                     onClick={handlePrintCurrentPatient}
                     disabled={
-                      (shouldShowMaleSection() && !formData.maleBloodType) ||
-                      (shouldShowFemaleSection() && !formData.femaleBloodType)
+                      (shouldShowMaleSection() &&
+                        !bloodTypeData.maleBloodType) ||
+                      (shouldShowFemaleSection() &&
+                        !bloodTypeData.femaleBloodType)
                     }
                     className='bg-[#054239] text-white hover:opacity-80 cursor-pointer rounded-lg py-3 px-6 text-lg disabled:opacity-50 disabled:cursor-not-allowed'>
                     🖨️ طباعة
@@ -2320,8 +2327,6 @@ const DoctorPage = () => {
                   onClick={() => {
                     setCurrentPatient(null);
                     setFormData({
-                      maleBloodType: "",
-                      femaleBloodType: "",
                       maleHIVstatus: "NEGATIVE",
                       femaleHIVstatus: "NEGATIVE",
                       maleHBSstatus: "NEGATIVE",

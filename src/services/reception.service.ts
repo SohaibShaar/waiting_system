@@ -63,221 +63,222 @@ async function createReceptionData(data: {
   notes?: string;
   priority?: number;
 }) {
-  // 0. فحص الرقم الوطني المكرر
-  const duplicateNationalIds: Array<{
-    nationalId: string;
-    name: string;
-    gender: string;
-  }> = [];
+  // استخدام transaction لضمان الاتساق
+  return await prisma.$transaction(async (tx) => {
+    // 0. فحص الرقم الوطني المكرر
+    const duplicateNationalIds: Array<{
+      nationalId: string;
+      name: string;
+      gender: string;
+    }> = [];
 
-  // فحص الرقم الوطني للزوج
-  if (data.maleNationalId) {
-    const existingMalePatient = await prisma.patient.findUnique({
-      where: { nationalId: data.maleNationalId },
-      select: { id: true, name: true, nationalId: true },
+    // فحص الرقم الوطني للزوج
+    if (data.maleNationalId) {
+      const existingMalePatient = await tx.patient.findUnique({
+        where: { nationalId: data.maleNationalId },
+        select: { id: true, name: true, nationalId: true },
+      });
+
+      if (existingMalePatient) {
+        duplicateNationalIds.push({
+          nationalId: data.maleNationalId,
+          name: existingMalePatient.name,
+          gender: "male",
+        });
+      }
+    }
+
+    // فحص الرقم الوطني للزوجة
+    if (data.femaleNationalId) {
+      const existingFemalePatient = await tx.patient.findUnique({
+        where: { nationalId: data.femaleNationalId },
+        select: { id: true, name: true, nationalId: true },
+      });
+
+      if (existingFemalePatient) {
+        duplicateNationalIds.push({
+          nationalId: data.femaleNationalId,
+          name: existingFemalePatient.name,
+          gender: "female",
+        });
+      }
+    }
+
+    // إذا وجدنا أرقام وطنية مكررة، نرمي خطأ خاص
+    if (duplicateNationalIds.length > 0) {
+      const error: any = new Error("DUPLICATE_NATIONAL_ID");
+      error.code = "DUPLICATE_NATIONAL_ID";
+      error.duplicates = duplicateNationalIds;
+      throw error;
+    }
+
+    // 1. الحصول على رقم الدور التالي مع قفل (lock)
+    // نقوم بقراءة وتحديث الرقم في نفس الوقت لمنع race condition
+    const setting = await tx.systemSettings.findUnique({
+      where: { key: "LAST_QUEUE_NUMBER" },
     });
 
-    if (existingMalePatient) {
-      duplicateNationalIds.push({
-        nationalId: data.maleNationalId,
-        name: existingMalePatient.name,
-        gender: "male",
-      });
-    }
-  }
+    const lastNumber = setting ? parseInt(setting.value) : 0;
+    const newQueueNumber = lastNumber + 1;
 
-  // فحص الرقم الوطني للزوجة
-  if (data.femaleNationalId) {
-    const existingFemalePatient = await prisma.patient.findUnique({
-      where: { nationalId: data.femaleNationalId },
-      select: { id: true, name: true, nationalId: true },
+    // تحديث الرقم فوراً قبل إنشاء أي شيء
+    await tx.systemSettings.update({
+      where: { key: "LAST_QUEUE_NUMBER" },
+      data: { value: newQueueNumber.toString() },
     });
 
-    if (existingFemalePatient) {
-      duplicateNationalIds.push({
-        nationalId: data.femaleNationalId,
-        name: existingFemalePatient.name,
-        gender: "female",
-      });
+    // 2. تحديد الاسم والرقم الوطني للمراجع بناءً على الحالة
+    let patientName = "";
+    let patientNationalId = "";
+
+    if (data.maleStatus === SpouseStatus.NORMAL) {
+      patientName = `${data.maleName} ${data.maleLastName}`;
+      patientNationalId = data.maleNationalId || "";
+    } else if (
+      data.maleStatus === SpouseStatus.LEGAL_INVITATION &&
+      data.maleName
+    ) {
+      patientName = `${data.maleName} ${data.maleLastName}`;
+      patientNationalId = data.maleNationalId || "";
+    } else if (
+      data.femaleStatus === SpouseStatus.LEGAL_INVITATION &&
+      data.femaleName
+    ) {
+      patientName = `${data.femaleName} ${data.femaleLastName}`;
+      patientNationalId = data.femaleNationalId || "";
+    } else if (data.maleName && data.maleLastName) {
+      patientName = `${data.maleName} ${data.maleLastName}`;
+      patientNationalId = data.maleNationalId || "";
+    } else if (data.femaleName && data.femaleLastName) {
+      patientName = `${data.femaleName} ${data.femaleLastName}`;
+      patientNationalId = data.femaleNationalId || "";
     }
-  }
 
-  // إذا وجدنا أرقام وطنية مكررة، نرمي خطأ خاص
-  if (duplicateNationalIds.length > 0) {
-    const error: any = new Error("DUPLICATE_NATIONAL_ID");
-    error.code = "DUPLICATE_NATIONAL_ID";
-    error.duplicates = duplicateNationalIds;
-    throw error;
-  }
+    // 3. إنشاء المراجع
+    const patient = await tx.patient.create({
+      data: {
+        name: patientName,
+        nationalId: patientNationalId || null,
+        ...(data.phoneNumber && { phoneNumber: data.phoneNumber }),
+      },
+    });
 
-  // 1. تحديد الاسم والرقم الوطني للمراجع بناءً على الحالة
-  let patientName = "";
-  let patientNationalId = "";
+    console.log(
+      `✅ تم إنشاء المراجع: ${patient.name} - رقم وطني: ${patient.nationalId}`
+    );
 
-  if (data.maleStatus === SpouseStatus.NORMAL) {
-    // حالة عادية - نستخدم بيانات الزوج
-    patientName = `${data.maleName} ${data.maleLastName}`;
-    patientNationalId = data.maleNationalId || "";
-  } else if (
-    data.maleStatus === SpouseStatus.LEGAL_INVITATION &&
-    data.maleName
-  ) {
-    // دعوة شرعية للزوج فقط
-    patientName = `${data.maleName} ${data.maleLastName}`;
-    patientNationalId = data.maleNationalId || "";
-  } else if (
-    data.femaleStatus === SpouseStatus.LEGAL_INVITATION &&
-    data.femaleName
-  ) {
-    // دعوة شرعية للزوجة فقط
-    patientName = `${data.femaleName} ${data.femaleLastName}`;
-    patientNationalId = data.femaleNationalId || "";
-  } else if (data.maleName && data.maleLastName) {
-    // استخدام بيانات الزوج إذا كانت موجودة
-    patientName = `${data.maleName} ${data.maleLastName}`;
-    patientNationalId = data.maleNationalId || "";
-  } else if (data.femaleName && data.femaleLastName) {
-    // استخدام بيانات الزوجة إذا كانت موجودة
-    patientName = `${data.femaleName} ${data.femaleLastName}`;
-    patientNationalId = data.femaleNationalId || "";
-  }
+    // 4. الحصول على أول محطة نشطة (الاستقبال)
+    const receptionStation = await tx.station.findFirst({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+    });
 
-  // 2. إنشاء المراجع
-  const patient = await prisma.patient.create({
-    data: {
-      name: patientName,
-      nationalId: patientNationalId || null,
-      ...(data.phoneNumber && { phoneNumber: data.phoneNumber }),
-    },
-  });
+    if (!receptionStation) {
+      throw new Error("❌ لا توجد محطات نشطة في النظام");
+    }
 
-  console.log(
-    `✅ تم إنشاء المراجع: ${patient.name} - رقم وطني: ${patient.nationalId}`
-  );
+    // 5. الحصول على المحطة التالية (المحطة الفعلية للخدمة)
+    const nextStation = await tx.station.findFirst({
+      where: {
+        isActive: true,
+        order: { gt: receptionStation.order },
+      },
+      orderBy: { order: "asc" },
+    });
 
-  // 3. الحصول على رقم الدور التالي
-  const lastNumber = await getLastQueueNumber();
-  const newQueueNumber = lastNumber + 1;
+    if (!nextStation) {
+      throw new Error("❌ لا توجد محطة خدمة تالية في النظام");
+    }
 
-  // 4. الحصول على أول محطة نشطة (الاستقبال)
-  const receptionStation = await prisma.station.findFirst({
-    where: { isActive: true },
-    orderBy: { order: "asc" },
-  });
+    // 6. إنشاء الدور
+    const queue = await tx.queue.create({
+      data: {
+        queueNumber: newQueueNumber,
+        patientId: patient.id,
+        currentStationId: nextStation.id,
+        status: OverallQueueStatus.ACTIVE,
+        priority: data.priority || 0,
+        ...(data.notes && { notes: data.notes }),
+      },
+      include: {
+        patient: true,
+        currentStation: true,
+      },
+    });
 
-  if (!receptionStation) {
-    throw new Error("❌ لا توجد محطات نشطة في النظام");
-  }
+    // 7. إنشاء سجل في QueueHistory للاستقبال (مكتمل مباشرة)
+    await tx.queueHistory.create({
+      data: {
+        queueId: queue.id,
+        stationId: receptionStation.id,
+        status: QueueStatus.COMPLETED,
+        calledAt: new Date(),
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
 
-  // 4. الحصول على المحطة التالية (المحطة الفعلية للخدمة)
-  const nextStation = await prisma.station.findFirst({
-    where: {
-      isActive: true,
-      order: { gt: receptionStation.order },
-    },
-    orderBy: { order: "asc" },
-  });
+    // 8. إنشاء سجل في QueueHistory للمحطة التالية (في انتظار المناداة)
+    await tx.queueHistory.create({
+      data: {
+        queueId: queue.id,
+        stationId: nextStation.id,
+        status: QueueStatus.WAITING,
+      },
+    });
 
-  if (!nextStation) {
-    throw new Error("❌ لا توجد محطة خدمة تالية في النظام");
-  }
+    console.log(`✅ تم إنشاء الدور #${newQueueNumber} للمراجع ${patient.name}`);
 
-  // 5. إنشاء الدور (المحطة الحالية هي المحطة التالية، ليس الاستقبال)
-  const queue = await prisma.queue.create({
-    data: {
-      queueNumber: newQueueNumber,
-      patientId: patient.id,
-      currentStationId: nextStation.id,
-      status: OverallQueueStatus.ACTIVE,
-      priority: data.priority || 0,
-      ...(data.notes && { notes: data.notes }),
-    },
-    include: {
-      patient: true,
-      currentStation: true,
-    },
-  });
-
-  // 6. إنشاء سجل في QueueHistory للاستقبال (مكتمل مباشرة)
-  await prisma.queueHistory.create({
-    data: {
-      queueId: queue.id,
-      stationId: receptionStation.id,
-      status: QueueStatus.COMPLETED,
-      calledAt: new Date(),
-      startedAt: new Date(),
-      completedAt: new Date(),
-    },
-  });
-
-  // 7. إنشاء سجل في QueueHistory للمحطة التالية (في انتظار المناداة)
-  await prisma.queueHistory.create({
-    data: {
-      queueId: queue.id,
-      stationId: nextStation.id,
-      status: QueueStatus.WAITING,
-      // لا نضع calledAt لأن المراجع لم يتم مناداته بعد
-    },
-  });
-
-  // 8. تحديث آخر رقم دور
-  await updateLastQueueNumber(newQueueNumber);
-
-  console.log(`✅ تم إنشاء الدور #${newQueueNumber} للمراجع ${patient.name}`);
-
-  // 9. إنشاء بيانات الاستقبال
-  const receptionData = await prisma.receptionData.create({
-    data: {
-      queueId: queue.id,
-      patientId: patient.id,
-      // حالة الزوجين
-      maleStatus: data.maleStatus,
-      femaleStatus: data.femaleStatus,
-      // بيانات الزوج
-      maleName: data.maleName || null,
-      maleLastName: data.maleLastName || null,
-      maleFatherName: data.maleFatherName || null,
-      maleMotherName: data.maleMotherName || null,
-      maleBirthDate: data.maleBirthDate || null,
-      maleNationalId: data.maleNationalId || null,
-      maleAge: data.maleAge !== undefined ? data.maleAge : null,
-      maleBirthPlace: data.maleBirthPlace || null,
-      maleRegistration: data.maleRegistration || null,
-      maleCountry: data.maleCountry || null,
-      // بيانات الزوجة
-      femaleName: data.femaleName || null,
-      femaleLastName: data.femaleLastName || null,
-      femaleFatherName: data.femaleFatherName || null,
-      femaleMotherName: data.femaleMotherName || null,
-      femaleBirthDate: data.femaleBirthDate || null,
-      femaleNationalId: data.femaleNationalId || null,
-      femaleAge: data.femaleAge !== undefined ? data.femaleAge : null,
-      femaleBirthPlace: data.femaleBirthPlace || null,
-      femaleRegistration: data.femaleRegistration || null,
-      femaleCountry: data.femaleCountry || null,
-      // بيانات عامة
-      phoneNumber: data.phoneNumber || null,
-      notes: data.notes || null,
-    },
-    include: {
-      queue: {
-        include: {
-          currentStation: true,
-          patient: true,
+    // 9. إنشاء بيانات الاستقبال
+    const receptionData = await tx.receptionData.create({
+      data: {
+        queueId: queue.id,
+        patientId: patient.id,
+        maleStatus: data.maleStatus,
+        femaleStatus: data.femaleStatus,
+        maleName: data.maleName || null,
+        maleLastName: data.maleLastName || null,
+        maleFatherName: data.maleFatherName || null,
+        maleMotherName: data.maleMotherName || null,
+        maleBirthDate: data.maleBirthDate || null,
+        maleNationalId: data.maleNationalId || null,
+        maleAge: data.maleAge !== undefined ? data.maleAge : null,
+        maleBirthPlace: data.maleBirthPlace || null,
+        maleRegistration: data.maleRegistration || null,
+        maleCountry: data.maleCountry || null,
+        femaleName: data.femaleName || null,
+        femaleLastName: data.femaleLastName || null,
+        femaleFatherName: data.femaleFatherName || null,
+        femaleMotherName: data.femaleMotherName || null,
+        femaleBirthDate: data.femaleBirthDate || null,
+        femaleNationalId: data.femaleNationalId || null,
+        femaleAge: data.femaleAge !== undefined ? data.femaleAge : null,
+        femaleBirthPlace: data.femaleBirthPlace || null,
+        femaleRegistration: data.femaleRegistration || null,
+        femaleCountry: data.femaleCountry || null,
+        phoneNumber: data.phoneNumber || null,
+        notes: data.notes || null,
+      },
+      include: {
+        queue: {
+          include: {
+            currentStation: true,
+            patient: true,
+          },
         },
       },
-    },
+    });
+
+    console.log(`✅ تم حفظ بيانات الاستقبال للدور #${newQueueNumber}`);
+
+    return {
+      receptionData,
+      patient,
+      queue,
+      queueNumber: newQueueNumber,
+      displayNumber: nextStation.displayNumber,
+    };
   });
-
-  console.log(`✅ تم حفظ بيانات الاستقبال للدور #${newQueueNumber}`);
-
-  return {
-    receptionData,
-    patient,
-    queue,
-    queueNumber: newQueueNumber,
-    displayNumber: nextStation.displayNumber,
-  };
 }
 
 /**

@@ -195,8 +195,6 @@ const BloodTypeScreenPage = () => {
         queueId: currentPatient.queueId,
       });
 
-      alert("✅ تم حفظ فصيلة الدم بنجاح");
-
       // إعادة تعيين النموذج
       setCurrentPatient(null);
       setMaleBloodType("");
@@ -273,17 +271,12 @@ const BloodTypeScreenPage = () => {
               </div>
             </div>
           ) : (
-            <div className='space-y-6'>
+            <div className='space-y-3'>
               {/* معلومات المراجع */}
-              <div className='card p-6'>
-                <div className='flex items-center justify-between mb-4'>
-                  <h2
-                    className='text-2xl font-bold'
-                    style={{ color: "var(--primary)" }}>
-                    معلومات المراجع
-                  </h2>
+              <div className='card px-6 py-1'>
+                <div className='flex items-center justify-between my-1'>
                   {currentPatient.priority === 1 && (
-                    <span className='px-4 py-2 rounded-lg bg-orange-400 text-white font-bold'>
+                    <span className='px-4 py-1 rounded-lg bg-orange-400 text-white font-bold'>
                       ⚠️ مستعجل
                     </span>
                   )}
@@ -294,16 +287,8 @@ const BloodTypeScreenPage = () => {
                     <p className='text-sm' style={{ color: "var(--dark)" }}>
                       رقم الدور
                     </p>
-                    <p className='text-xl font-bold'>
+                    <p className='text-4xl font-bold'>
                       #{currentPatient.queueNumber}
-                    </p>
-                  </div>
-                  <div>
-                    <p className='text-sm' style={{ color: "var(--dark)" }}>
-                      رقم المريض
-                    </p>
-                    <p className='text-xl font-bold'>
-                      {currentPatient.patientId}
                     </p>
                   </div>
                 </div>
@@ -323,16 +308,17 @@ const BloodTypeScreenPage = () => {
                   <h3
                     className='text-xl font-bold mb-4'
                     style={{ color: "var(--primary)" }}>
-                    🔵 فصيلة دم الزوج
-                  </h3>
-                  <div className='mb-2'>
-                    <p className='text-lg font-semibold mb-4'>
+                    🔵 فصيلة دم الزوج {" | "}
+                    <span className='bold text-black text-sm'>
                       {currentPatient.ReceptionData?.maleName}{" "}
                       {currentPatient.ReceptionData?.maleLastName}
-                    </p>
+                    </span>
+                  </h3>
+                  <div className='mb-2'>
+                    <p className='text-lg font-semibold mb-4'></p>
                   </div>
 
-                  <div className='grid grid-cols-4 gap-3'>
+                  <div className='grid grid-cols-8 gap-3'>
                     {BLOOD_TYPES.map((type) => (
                       <button
                         key={`male-${type}`}
@@ -353,13 +339,13 @@ const BloodTypeScreenPage = () => {
                     ))}
                   </div>
 
-                  {maleBloodType && (
+                  {/*maleBloodType && (
                     <div className='mt-4 p-4 bg-blue-50 rounded-lg'>
                       <p className='text-center text-lg font-bold text-blue-800'>
                         ✓ تم اختيار: {maleBloodType}
                       </p>
                     </div>
-                  )}
+                  )*/}
                 </div>
               )}
 
@@ -369,16 +355,17 @@ const BloodTypeScreenPage = () => {
                   <h3
                     className='text-xl font-bold mb-4'
                     style={{ color: "var(--secondary)" }}>
-                    🔴 فصيلة دم الزوجة
-                  </h3>
-                  <div className='mb-2'>
-                    <p className='text-lg font-semibold mb-4'>
+                    🔴 فصيلة دم الزوجة {" | "}
+                    <span className='bold text-black text-sm'>
                       {currentPatient.ReceptionData?.femaleName}{" "}
                       {currentPatient.ReceptionData?.femaleLastName}
-                    </p>
+                    </span>
+                  </h3>
+                  <div className='mb-2'>
+                    <p className='text-lg font-semibold mb-4'></p>
                   </div>
 
-                  <div className='grid grid-cols-4 gap-3'>
+                  <div className='grid grid-cols-8 gap-3'>
                     {BLOOD_TYPES.map((type) => (
                       <button
                         key={`female-${type}`}
@@ -399,13 +386,13 @@ const BloodTypeScreenPage = () => {
                     ))}
                   </div>
 
-                  {femaleBloodType && (
+                  {/*femaleBloodType && (
                     <div className='mt-4 p-4 bg-pink-50 rounded-lg'>
                       <p className='text-center text-lg font-bold text-pink-800'>
                         ✓ تم اختيار: {femaleBloodType}
                       </p>
                     </div>
-                  )}
+                  )*/}
                 </div>
               )}
 
