@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import cors from "cors";
 import dotenv from "dotenv";
 import { Server as SocketIOServer } from "socket.io";
+import cron from "node-cron";
 
 // Import routes
 import patientRoutes from "./routes/patient.routes";
@@ -17,11 +18,13 @@ import bloodTypeRoutes from "./routes/bloodType.routes";
 import doctorRoutes from "./routes/doctor.routes";
 import accountingRoutes from "./routes/accounting.routes";
 import authRoutes from "./routes/auth.routes";
+import archiveRoutes from "./routes/archive.routes";
 
 // Import WebSocket functions
 import { initSocketIO } from "./websocket/socket";
 import favPricesRoutes from "./routes/favPrices.routes";
 import fastPriceRoutes from "./routes/fastPrice.routes";
+import { performDailyArchive } from "./services/archive.service";
 
 dotenv.config();
 
@@ -56,6 +59,7 @@ app.use("/api/accounting", accountingRoutes);
 app.use("/api/favPrices", favPricesRoutes);
 app.use("/api/fastPrice", fastPriceRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/archive", archiveRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {
@@ -74,6 +78,7 @@ app.get("/", (req, res) => {
       bloodType: "/api/blood-type",
       doctor: "/api/doctor",
       accounting: "/api/accounting",
+      archive: "/api/archive",
     },
   });
 });
@@ -109,9 +114,38 @@ export {
   emitScreenDataUpdate,
 } from "./websocket/socket";
 
+// ============================================
+// Scheduled Tasks - المهام المجدولة
+// ============================================
+
+/**
+ * مهمة الأرشفة اليومية التلقائية
+ * تعمل يومياً في الساعة 00:00 (منتصف الليل)
+ * يمكن تغيير الوقت من متغير البيئة ARCHIVE_SCHEDULE_TIME
+ * مثال: "0 0 * * *" = منتصف الليل يومياً
+ * مثال: "0 2 * * *" = الساعة 2 صباحاً يومياً
+ */
+const archiveScheduleTime = process.env.ARCHIVE_SCHEDULE_TIME || "0 0 * * *";
+
+cron.schedule(archiveScheduleTime, async () => {
+  console.log("⏰ تشغيل مهمة الأرشفة اليومية التلقائية...");
+  try {
+    await performDailyArchive();
+  } catch (error: any) {
+    console.error("❌ فشلت مهمة الأرشفة التلقائية:", error);
+  }
+});
+
+console.log(`📅 تم جدولة مهمة الأرشفة اليومية في: ${archiveScheduleTime}`);
+
+// ============================================
+// Server Start
+// ============================================
+
 const PORT = process.env.PORT || 3003;
 
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
   console.log(`📡 WebSocket server is ready`);
+  console.log(`📅 Daily archive scheduled at: ${archiveScheduleTime}`);
 });

@@ -7,6 +7,7 @@ import BloodDrawPage from "./pages/BloodDrawPage";
 import BloodTypeScreenPage from "./pages/BloodTypeScreenPage";
 import DoctorPage from "./pages/DoctorPage";
 import PatientDetailsPage from "./pages/PatientDetailsPage";
+import ArchivePage from "./pages/ArchivePage";
 import PasswordProtectedRoute from "./components/PasswordProtectedRoute";
 import "./App.css";
 
@@ -69,6 +70,14 @@ function App() {
           element={
             <PasswordProtectedRoute pageName='doctor'>
               <PatientDetailsPage />
+            </PasswordProtectedRoute>
+          }
+        />
+        <Route
+          path='/archive'
+          element={
+            <PasswordProtectedRoute pageName='archive'>
+              <ArchivePage />
             </PasswordProtectedRoute>
           }
         />
@@ -241,6 +250,24 @@ function HomePage() {
                 الطبيبة
               </h2>
               <p style={{ color: "var(--dark)" }}>الفحص النهائي</p>
+            </div>
+          </Link>
+
+          {/* Archive */}
+          <Link to='/archive' className='transform hover:scale-105 transition'>
+            <div
+              className='rounded-lg shadow-xl p-8 text-center hover:shadow-2xl transition duration-300'
+              style={{
+                backgroundColor: "var(--white)",
+                color: "var(--dark)",
+              }}>
+              <div className='text-6xl mb-4'>📁</div>
+              <h2
+                className='text-2xl font-bold mb-2'
+                style={{ color: "var(--primary)" }}>
+                الأرشيف
+              </h2>
+              <p style={{ color: "var(--dark)" }}>عرض البيانات المؤرشفة</p>
             </div>
           </Link>
         </div>

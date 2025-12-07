@@ -15,11 +15,25 @@ async function createLabData(data: {
   femaleNotes?: string;
   notes?: string;
 }) {
-  // إنشاء بيانات المختبر
-  const labData = await prisma.labData.create({
-    data: {
+  // التحقق من وجود بيانات سابقة
+  const existing = await prisma.labData.findUnique({
+    where: { queueId: data.queueId },
+  });
+
+  // إنشاء أو تحديث بيانات المختبر
+  const labData = await prisma.labData.upsert({
+    where: { queueId: data.queueId },
+    create: {
       queueId: data.queueId,
       patientId: data.patientId,
+      ...(data.doctorName && { doctorName: data.doctorName }),
+      isMaleHealthy: data.isMaleHealthy,
+      isFemaleHealthy: data.isFemaleHealthy,
+      ...(data.maleNotes && { maleNotes: data.maleNotes }),
+      ...(data.femaleNotes && { femaleNotes: data.femaleNotes }),
+      ...(data.notes && { notes: data.notes }),
+    },
+    update: {
       ...(data.doctorName && { doctorName: data.doctorName }),
       isMaleHealthy: data.isMaleHealthy,
       isFemaleHealthy: data.isFemaleHealthy,
@@ -37,7 +51,13 @@ async function createLabData(data: {
     },
   });
 
-  console.log(`✅ تم حفظ بيانات المختبر للدور #${labData.queue.queueNumber}`);
+  if (existing) {
+    console.log(
+      `✅ تم تحديث بيانات المختبر للدور #${labData.queue.queueNumber}`
+    );
+  } else {
+    console.log(`✅ تم حفظ بيانات المختبر للدور #${labData.queue.queueNumber}`);
+  }
 
   // لا يتم استدعاء المراجع التالي تلقائياً
   // يجب الاستدعاء يدوياً من واجهة المستخدم

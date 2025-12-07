@@ -1,4 +1,4 @@
-export const API_URL_WITHOUT_ROUTE = "http://192.168.1.100:3003";
+export const API_URL_WITHOUT_ROUTE = "http://localhost:3003";
 export const API_BASE_URL = `${API_URL_WITHOUT_ROUTE}/api`;
 
 export interface ScreenDataItem {

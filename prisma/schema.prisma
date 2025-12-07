@@ -356,3 +356,275 @@ model MasterPassword {
 
   @@map("master_password")
 }
+
+// ============================================
+// Archive Tables - جداول الأرشيف
+// ============================================
+
+model ArchivePatient {
+  id                          Int                           @id @default(autoincrement())
+  name                        String                        @db.VarChar(255)
+  phoneNumber                 String?                       @db.VarChar(20)
+  nationalId                  String?                       @db.VarChar(50)
+  createdAt                   DateTime
+  updatedAt                   DateTime
+  archivedAt                  DateTime                      @default(now())
+  ArchiveQueue                ArchiveQueue[]
+  ArchiveCompletedVisit       ArchiveCompletedVisit[]
+  ArchiveCompletedPatientData ArchiveCompletedPatientData[]
+  ArchiveReceptionData        ArchiveReceptionData[]
+  ArchiveAccountingData       ArchiveAccountingData[]
+  ArchiveBloodDrawData        ArchiveBloodDrawData[]
+  ArchiveLabData              ArchiveLabData[]
+  ArchiveDoctorData           ArchiveDoctorData[]
+
+  @@index([phoneNumber])
+  @@index([nationalId])
+  @@index([archivedAt])
+  @@map("archive_patients")
+}
+
+model ArchiveQueue {
+  id                    Int                    @id @default(autoincrement())
+  queueNumber           Int
+  patientId             Int
+  currentStationId      Int
+  currentStationName    String?                @db.VarChar(255)
+  status                OverallQueueStatus
+  priority              Int
+  notes                 String?                @db.Text
+  createdAt             DateTime
+  completedAt           DateTime?
+  archivedAt            DateTime               @default(now())
+  ArchiveQueueHistory   ArchiveQueueHistory[]
+  ArchiveReceptionData  ArchiveReceptionData?
+  ArchiveAccountingData ArchiveAccountingData?
+  ArchiveBloodDrawData  ArchiveBloodDrawData?
+  ArchiveLabData        ArchiveLabData?
+  ArchiveDoctorData     ArchiveDoctorData?
+  patient               ArchivePatient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([archivedAt])
+  @@map("archive_queues")
+}
+
+model ArchiveQueueHistory {
+  id          Int          @id @default(autoincrement())
+  queueId     Int
+  stationId   Int
+  stationName String?      @db.VarChar(255)
+  status      QueueStatus
+  calledAt    DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  notes       String?      @db.Text
+  calledBy    String?      @db.VarChar(255)
+  createdAt   DateTime
+  archivedAt  DateTime     @default(now())
+  queue       ArchiveQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([queueId])
+  @@index([stationId])
+  @@index([status])
+  @@index([calledAt])
+  @@index([archivedAt])
+  @@map("archive_queue_history")
+}
+
+model ArchiveReceptionData {
+  id                 Int            @id @default(autoincrement())
+  patientId          Int
+  queueId            Int            @unique
+  maleName           String?        @db.VarChar(255)
+  maleLastName       String?        @db.VarChar(255)
+  maleFatherName     String?        @db.VarChar(255)
+  maleMotherName     String?        @db.VarChar(255)
+  maleBirthDate      DateTime?      @db.DateTime(0)
+  maleNationalId     String?        @db.VarChar(255)
+  maleAge            Int?
+  femaleName         String?        @db.VarChar(255)
+  femaleLastName     String?        @db.VarChar(255)
+  femaleFatherName   String?        @db.VarChar(255)
+  femaleMotherName   String?        @db.VarChar(255)
+  femaleBirthDate    DateTime?      @db.DateTime(0)
+  femaleNationalId   String?        @db.VarChar(255)
+  femaleAge          Int?
+  notes              String?        @db.Text
+  createdAt          DateTime
+  updatedAt          DateTime
+  phoneNumber        String?        @db.VarChar(20)
+  maleStatus         SpouseStatus
+  femaleStatus       SpouseStatus
+  maleBirthPlace     String?        @db.VarChar(255)
+  maleRegistration   String?        @db.VarChar(255)
+  maleCountry        String?        @db.VarChar(255)
+  femaleBirthPlace   String?        @db.VarChar(255)
+  femaleRegistration String?        @db.VarChar(255)
+  femaleCountry      String?        @db.VarChar(255)
+  archivedAt         DateTime       @default(now())
+  patient            ArchivePatient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue              ArchiveQueue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([maleNationalId])
+  @@index([femaleNationalId])
+  @@index([archivedAt])
+  @@map("archive_reception_data")
+}
+
+model ArchiveAccountingData {
+  id          Int            @id @default(autoincrement())
+  patientId   Int
+  queueId     Int            @unique
+  totalAmount Float?
+  isPaid      Boolean
+  notes       String?        @db.Text
+  createdAt   DateTime
+  updatedAt   DateTime
+  archivedAt  DateTime       @default(now())
+  patient     ArchivePatient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue       ArchiveQueue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([archivedAt])
+  @@map("archive_accounting_data")
+}
+
+model ArchiveBloodDrawData {
+  id               Int            @id @default(autoincrement())
+  patientId        Int
+  queueId          Int            @unique
+  maleBloodTube1   String?        @db.VarChar(50)
+  maleBloodTube2   String?        @db.VarChar(50)
+  femaleBloodTube1 String?        @db.VarChar(50)
+  femaleBloodTube2 String?        @db.VarChar(50)
+  notes            String?        @db.Text
+  createdAt        DateTime
+  updatedAt        DateTime
+  archivedAt       DateTime       @default(now())
+  patient          ArchivePatient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue            ArchiveQueue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([archivedAt])
+  @@map("archive_blood_draw_data")
+}
+
+model ArchiveLabData {
+  id              Int            @id @default(autoincrement())
+  patientId       Int
+  queueId         Int            @unique
+  doctorName      String?        @db.VarChar(255)
+  isMaleHealthy   Status
+  isFemaleHealthy Status
+  maleNotes       String?        @db.Text
+  femaleNotes     String?        @db.Text
+  notes           String?        @db.Text
+  createdAt       DateTime
+  updatedAt       DateTime
+  archivedAt      DateTime       @default(now())
+  patient         ArchivePatient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue           ArchiveQueue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([doctorName])
+  @@index([archivedAt])
+  @@map("archive_lab_data")
+}
+
+model ArchiveDoctorData {
+  id                      Int            @id @default(autoincrement())
+  patientId               Int
+  queueId                 Int            @unique
+  maleBloodType           String?        @db.VarChar(255)
+  femaleBloodType         String?        @db.VarChar(255)
+  maleHIVstatus           DiseasesStatus
+  femaleHIVstatus         DiseasesStatus
+  maleHBSstatus           DiseasesStatus
+  femaleHBSstatus         DiseasesStatus
+  maleHBCstatus           DiseasesStatus
+  femaleHBCstatus         DiseasesStatus
+  maleHIVvalue            String?        @db.VarChar(255)
+  femaleHIVvalue          String?        @db.VarChar(255)
+  maleHBSvalue            String?        @db.VarChar(255)
+  femaleHBSvalue          String?        @db.VarChar(255)
+  maleHBCvalue            String?        @db.VarChar(255)
+  femaleHBCvalue          String?        @db.VarChar(255)
+  maleHemoglobinEnabled   Boolean
+  maleHbS                 String?        @db.VarChar(255)
+  maleHbF                 String?        @db.VarChar(255)
+  maleHbA1c               String?        @db.VarChar(255)
+  maleHbA2                String?        @db.VarChar(255)
+  maleHbSc                String?        @db.VarChar(255)
+  maleHbD                 String?        @db.VarChar(255)
+  maleHbE                 String?        @db.VarChar(255)
+  maleHbC                 String?        @db.VarChar(255)
+  femaleHemoglobinEnabled Boolean
+  femaleHbS               String?        @db.VarChar(255)
+  femaleHbF               String?        @db.VarChar(255)
+  femaleHbA1c             String?        @db.VarChar(255)
+  femaleHbA2              String?        @db.VarChar(255)
+  femaleHbSc              String?        @db.VarChar(255)
+  femaleHbD               String?        @db.VarChar(255)
+  femaleHbE               String?        @db.VarChar(255)
+  femaleHbC               String?        @db.VarChar(255)
+  maleNotes               String?        @db.Text
+  femaleNotes             String?        @db.Text
+  notes                   String?        @db.Text
+  createdAt               DateTime
+  updatedAt               DateTime
+  archivedAt              DateTime       @default(now())
+  patient                 ArchivePatient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue                   ArchiveQueue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([archivedAt])
+  @@map("archive_doctor_data")
+}
+
+model ArchiveCompletedVisit {
+  id            Int            @id @default(autoincrement())
+  patientId     Int
+  queueNumber   Int
+  totalDuration Int?
+  waitingTime   Int?
+  serviceTime   Int?
+  stationsCount Int
+  visitData     String?        @db.LongText
+  notes         String?        @db.Text
+  completedAt   DateTime
+  archivedAt    DateTime       @default(now())
+  patient       ArchivePatient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([completedAt])
+  @@index([archivedAt])
+  @@map("archive_completed_visits")
+}
+
+model ArchiveCompletedPatientData {
+  id             Int            @id @default(autoincrement())
+  queueId        Int            @unique
+  patientId      Int
+  receptionData  String?        @db.LongText
+  accountingData String?        @db.LongText
+  bloodDrawData  String?        @db.LongText
+  labData        String?        @db.LongText
+  doctorData     String?        @db.LongText
+  completedAt    DateTime
+  archivedAt     DateTime       @default(now())
+  patient        ArchivePatient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([queueId])
+  @@index([archivedAt])
+  @@map("archive_completed_patient_data")
+}
